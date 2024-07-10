@@ -55,6 +55,17 @@ struct REF_TypeGetter<T, typename std::enable_if<std::is_pointer<T>::value && !s
 	}
 };
 
+// Treat all enums as uint64_t.
+template<typename T>
+struct REF_TypeGetter<T, typename std::enable_if<std::is_enum<T>::value>::type>
+{
+	static const REF_Type* get()
+	{
+		static const REF_Type* type = &g_uint64_t_Type;
+		return type;
+	}
+};
+
 // Helper to fetch type info by template parameter.
 template<typename T>
 const REF_Type* REF_GetType()
@@ -159,7 +170,7 @@ struct v2_Type : public REF_Type
 	virtual int size() const { return sizeof(v2); }
 	virtual double to_number(void* v) const { return 0; }
 	virtual String to_string(void* v) const { return String(); }
-	virtual void cast(void* to, void* from, const REF_Type* from_type) const { assert(from_type == REF_GetType<v2>()); *(v2*)to = *(v2*)from; }
+	virtual void cast(void* to, void* from, const REF_Type* from_type) const { assert(from_type == this); *(v2*)to = *(v2*)from; }
 	virtual void cleanup(void* v) const { }
 	virtual int lua_set(lua_State* L, void* v) const { lua_pushnumber(L, ((v2*)v)->x); lua_pushnumber(L, ((v2*)v)->y); return 2; }
 	virtual int lua_get(lua_State* L, int index, void* v) const { ((v2*)v)->x = (float)lua_tonumber(L, index); ((v2*)v)->y = (float)lua_tonumber(L, index + 1); return 2; }
@@ -368,7 +379,6 @@ struct REF_Constant : REF_List<REF_Constant>
 	const REF_Type* type;
 };
 
-// Binds all constants registered with REF_BIND_CONSTANT to Lua.
 void REF_BindAllConstants(lua_State* L)
 {
 	for (const REF_Constant* c = REF_Constant::head(); c; c = c->next) {
@@ -377,34 +387,197 @@ void REF_BindAllConstants(lua_State* L)
 	}
 }
 
-#define REF_BIND_FUNCTION(F) \
+// Treat handles as void* within the reflection sytsem.
+#define REF_HANDLE_TYPE(H) \
+	template <> \
+	struct REF_TypeGetter<H> \
+	{ \
+		static const REF_Type* get() \
+		{ \
+			return &g_void_ptr_Type; \
+		} \
+	}
+
+#define REF_FUNCTION(F) \
 	REF_Function g_##F##_REF_Function(#F, F)
 
-#define REF_BIND_FUNCTION_EX(name, F) \
+#define REF_FUNCTION_EX(name, F) \
 	REF_Function g_##name##_REF_Function(#name, F)
 
-#define REF_BIND_CONSTANT(C) \
+#define REF_CONSTANT(C) \
 	REF_Constant g_##C##_REF_Constant(#C, C)
+#define CF_ENUM(K, V) REF_CONSTANT(K);
 
-// Bind some functions and constants to Lua.
+// -------------------------------------------------------------------------------------------------
+// App
 
-void wrap_draw_quad(v2 min, v2 max, float thickness, float chubbiness)
+struct CF_Result_Type : public REF_Type
 {
-	draw_quad(make_aabb(min, max), thickness, chubbiness);
+	virtual const char* name() const { return "CF_Result"; }
+	virtual int size() const { return sizeof(CF_Result); }
+	virtual double to_number(void* v) const { return (double)((CF_Result*)v)->code; }
+	virtual String to_string(void* v) const { return ((CF_Result*)v)->details; }
+	virtual void cast(void* to, void* from, const REF_Type* from_type) const { assert(from_type == this); *(CF_Result*)to = *(CF_Result*)from; }
+	virtual void cleanup(void* v) const { }
+	virtual int lua_set(lua_State* L, void* v) const
+	{
+		CF_Result* result = (CF_Result*)v;
+		lua_newtable(L);
+		lua_pushstring(L, "code");
+		lua_pushinteger(L, result->code);
+		lua_settable(L, -3);
+		lua_pushstring(L, "details");
+		lua_pushstring(L, result->details);
+		lua_settable(L, -3);
+		return 1;
+	}
+	virtual int lua_get(lua_State* L, int index, void* v) const
+	{
+		assert(lua_istable(L, index));
+		CF_Result* result = (CF_Result*)v;
+		lua_pushstring(L, "code");
+		lua_gettable(L, index);
+		result->code = (int)lua_tointeger(L, -1);
+		lua_pop(L, 1);
+		lua_pushstring(L, "details");
+		lua_gettable(L, index);
+		result->details = lua_tostring(L, -1);
+		lua_pop(L, 1);
+		return 1;
+	}
+} g_result_Type;
+template <> struct REF_TypeGetter<CF_Result> { static const REF_Type* get() { return &g_result_Type; } };
+
+CF_RESULT_DEFS
+CF_MESSAGE_BOX_TYPE_DEFS
+
+REF_FUNCTION(is_error);
+REF_FUNCTION(message_box);
+
+// -------------------------------------------------------------------------------------------------
+// Graphics
+
+REF_HANDLE_TYPE(CF_Canvas);
+
+// -------------------------------------------------------------------------------------------------
+// App
+
+CF_APP_OPTION_DEFS
+CF_POWER_STATE_DEFS
+
+REF_FUNCTION(make_app);
+REF_FUNCTION(destroy_app);
+REF_FUNCTION(app_is_running);
+REF_FUNCTION(app_signal_shutdown);
+REF_FUNCTION(app_update);
+REF_FUNCTION(app_draw_onto_screen);
+REF_FUNCTION(app_get_width);
+REF_FUNCTION(app_get_height);
+v2 wrap_app_get_position() { int x, y; app_get_position(&x, &y); return V2((float)x, (float)y); }
+REF_FUNCTION_EX(app_get_position, wrap_app_get_position);
+REF_FUNCTION(app_set_position);
+v2 wrap_app_get_size() { int x, y; app_get_size(&x, &y); return V2((float)x, (float)y); }
+REF_FUNCTION(app_set_size);
+REF_FUNCTION_EX(app_get_size, wrap_app_get_size);
+REF_FUNCTION(app_get_dpi_scale);
+REF_FUNCTION(app_dpi_scaled_was_changed);
+REF_FUNCTION(app_was_resized);
+REF_FUNCTION(app_was_moved);
+REF_FUNCTION(app_lost_focus); 
+REF_FUNCTION(app_gained_focus); 
+REF_FUNCTION(app_has_focus);
+REF_FUNCTION(app_was_minimized);
+REF_FUNCTION(app_was_maximized);
+REF_FUNCTION(app_minimized);
+REF_FUNCTION(app_maximized);
+REF_FUNCTION(app_was_restored);
+REF_FUNCTION(app_mouse_entered);
+REF_FUNCTION(app_mouse_exited);
+REF_FUNCTION(app_mouse_inside);
+REF_FUNCTION(app_get_canvas_width);
+REF_FUNCTION(app_get_canvas_height);
+REF_FUNCTION(app_set_vsync);
+REF_FUNCTION(app_get_vsync);
+REF_FUNCTION(app_init_imgui);
+REF_FUNCTION(app_get_canvas);
+REF_FUNCTION(app_set_canvas_size);
+CF_PowerState app_get_power_state() { CF_PowerInfo info = app_power_info(); return info.state; }
+int app_get_power_seconds_left() { CF_PowerInfo info = app_power_info(); return info.seconds_left; }
+int app_get_power_percentage_left() { CF_PowerInfo info = app_power_info(); return info.percentage_left; }
+REF_FUNCTION(app_get_power_seconds_left);
+REF_FUNCTION(app_get_power_percentage_left);
+
+// -------------------------------------------------------------------------------------------------
+// Audio
+
+REF_HANDLE_TYPE(CF_Audio);
+REF_FUNCTION(audio_load_ogg);
+REF_FUNCTION(audio_load_wav);
+REF_FUNCTION(audio_load_ogg_from_memory);
+REF_FUNCTION(audio_load_wav_from_memory);
+REF_FUNCTION(audio_destroy);
+REF_FUNCTION(audio_sample_rate);
+REF_FUNCTION(audio_sample_count);
+REF_FUNCTION(audio_channel_count);
+REF_FUNCTION(audio_set_pan);
+REF_FUNCTION(audio_set_global_volume);
+REF_FUNCTION(audio_set_sound_volume);
+REF_FUNCTION(audio_set_pause);
+REF_FUNCTION(music_play);
+REF_FUNCTION(music_stop);
+REF_FUNCTION(play_music);
+REF_FUNCTION(stop_music);
+REF_FUNCTION(music_set_volume);
+REF_FUNCTION(music_set_loop);
+REF_FUNCTION(music_set_pitch);
+REF_FUNCTION(music_pause);
+REF_FUNCTION(music_resume);
+REF_FUNCTION(music_switch_to);
+REF_FUNCTION(music_crossfade);
+REF_FUNCTION(music_set_sample_index);
+REF_FUNCTION(music_get_sample_index);
+
+REF_HANDLE_TYPE(Sound);
+Sound wrap_sound_play(Audio audio, bool paused, bool looped, float volume, float pan, float pitch)
+{
+	SoundParams params;
+	params.paused = paused;
+	params.looped = looped;
+	params.volume = volume;
+	params.pan = pan;
+	params.pitch = pitch;
+	return sound_play(audio, params);
 }
+REF_FUNCTION_EX(play_sound, wrap_sound_play);
+REF_FUNCTION(sound_is_active);
+REF_FUNCTION(sound_get_is_paused);
+REF_FUNCTION(sound_get_is_looped);
+REF_FUNCTION(sound_get_volume);
+REF_FUNCTION(sound_get_sample_index);
+REF_FUNCTION(sound_set_is_paused);
+REF_FUNCTION(sound_set_is_looped);
+REF_FUNCTION(sound_set_volume);
+REF_FUNCTION(sound_set_pitch);
+REF_FUNCTION(sound_set_sample_index);
+REF_FUNCTION(sound_stop);
 
-const char* test = "testing a string constant";
-REF_BIND_CONSTANT(APP_OPTIONS_D3D11_CONTEXT);
-REF_BIND_CONSTANT(test);
+// -------------------------------------------------------------------------------------------------
+// Clipboard
 
-REF_BIND_FUNCTION(app_is_running);
-REF_BIND_FUNCTION(app_update);
-REF_BIND_FUNCTION(app_draw_onto_screen);
-REF_BIND_FUNCTION(text_height);
-REF_BIND_FUNCTION(text_width);
-REF_BIND_FUNCTION(draw_text);
-REF_BIND_FUNCTION(destroy_app);
-REF_BIND_FUNCTION_EX(draw_quad, wrap_draw_quad);
+REF_FUNCTION(clipboard_get);
+REF_FUNCTION(clipboard_set);
+
+// -------------------------------------------------------------------------------------------------
+// Draw
+
+REF_FUNCTION(text_height);
+REF_FUNCTION(text_width);
+REF_FUNCTION(draw_text);
+void wrap_draw_quad(v2 min, v2 max, float thickness, float chubbiness) { draw_quad(make_aabb(min, max), thickness, chubbiness); }
+REF_FUNCTION_EX(draw_quad, wrap_draw_quad);
+
+// -------------------------------------------------------------------------------------------------
+// 
 
 int main(int argc, char* argv[])
 {
