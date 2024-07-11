@@ -7,6 +7,48 @@ extern "C" {
 #include <lauxlib.h>
 }
 
+void PrintLuaStack(lua_State *L)
+{
+	int top = lua_gettop(L);
+	printf("Lua stack (top to bottom):\n");
+	for (int i = top; i >= 1; i--) {
+		int type = lua_type(L, i);
+		switch (type) {
+			case LUA_TNIL:
+				printf("[%d] NIL\n", i);
+				break;
+			case LUA_TBOOLEAN:
+				printf("[%d] %s\n", i, lua_toboolean(L, i) ? "true" : "false");
+				break;
+			case LUA_TNUMBER:
+				printf("[%d] %f\n", i, lua_tonumber(L, i));
+				break;
+			case LUA_TSTRING:
+				printf("[%d] '%s'\n", i, lua_tostring(L, i));
+				break;
+			case LUA_TTABLE:
+				printf("[%d] TABLE\n", i);
+				break;
+			case LUA_TFUNCTION:
+				printf("[%d] FUNCTION\n", i);
+				break;
+			case LUA_TUSERDATA:
+				printf("[%d] USERDATA\n", i);
+				break;
+			case LUA_TTHREAD:
+				printf("[%d] THREAD\n", i);
+				break;
+			case LUA_TLIGHTUSERDATA:
+				printf("[%d] LIGHTUSERDATA\n", i);
+				break;
+			default:
+				printf("[%d] Unknown type\n", i);
+				break;
+		}
+	}
+	printf("\n");
+}
+
 // -------------------------------------------------------------------------------------------------
 // REF - Reflection API.
 
@@ -220,6 +262,7 @@ struct REF_Struct : public REF_Type
 
 	virtual void lua_get(lua_State* L, int index, void* v) const
 	{
+		assert(index > 0);
 		assert(lua_istable(L, index));
 		int count = member_count();
 		const REF_Member* mptr = members();
@@ -424,6 +467,33 @@ struct REF_Constant : REF_List<REF_Constant>
 	uintptr_t constant;
 	const REF_Type* type;
 };
+
+template <typename T>
+void REF_LuaSetArray(lua_State* L, T* data, int count)
+{
+	const REF_Type* type = REF_GetType<T>();
+	lua_newtable(L);
+	for (int i = 0; i < count; ++i) {
+		type->lua_set(L, data + i);
+		lua_rawseti(L, -2, i + 1);
+	}
+}
+
+template <typename T>
+void REF_LuaGetArray(lua_State* L, int index, T** out_ptr, int* out_count)
+{
+	const REF_Type* type = REF_GetType<T>();
+	int count = (int)luaL_len(L, index);
+	T* out = (T*)cf_alloc(type->size() * count);
+	for (int i = 0; i < count; ++i) {
+		lua_rawgeti(L, index, i + 1);
+		T* t = out + i;
+		type->lua_get(L, lua_gettop(L), out + i);
+		lua_pop(L, 1);
+	}
+	*out_ptr = out;
+	if (out_count) *out_count = count;
+}
 
 // -------------------------------------------------------------------------------------------------
 // User API.
@@ -806,7 +876,7 @@ REF_FUNCTION_EX(draw_capsule_fill, cf_draw_capsule_fill2);
 REF_FUNCTION(draw_tri);
 REF_FUNCTION(draw_tri_fill);
 REF_FUNCTION(draw_line);
-// @TODO draw_polyine
+// draw_polyine - Manually bound below.
 REF_FUNCTION_EX(draw_bezier_line, cf_draw_bezier_line2);
 REF_FUNCTION(draw_arrow);
 
@@ -1056,12 +1126,37 @@ REF_FUNCTION(joypad_axis);
 REF_CONSTANT(CF_VERSION_STRING_COMPILED);
 REF_FUNCTION(version_string_linked);
 
+// -------------------------------------------------------------------------------------------------
+// Custom manual binding.
+
+int wrap_draw_polyine(lua_State* L)
+{
+	v2* pts;
+	int count;
+	float thickness;
+	bool loop;
+	REF_LuaGetArray(L, 1, &pts, &count);
+	REF_GetType<float>()->lua_get(L, 2, &thickness);
+	REF_GetType<bool>()->lua_get(L, 3, &loop);
+	lua_pop(L, 3);
+	draw_polyline(pts, count, thickness, loop);
+	cf_free(pts);
+	return 0;
+}
+
+void BindCustomFunctions(lua_State* L)
+{
+	lua_pushcfunction(L, wrap_draw_polyine);
+	lua_setglobal(L, "draw_polyline");
+}
+
 int main(int argc, char* argv[])
 {
 	make_app("Fancy Window Title", 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
 	lua_State* L = luaL_newstate();
 	luaL_openlibs(L);
 	REF_BindLua(L);
+	BindCustomFunctions(L);
 
 	if (luaL_loadfile(L, "../../src/main.lua") || lua_pcall(L, 0, 0, 0)) {
 		fprintf(stderr, "Error loading or executing file: %s\n", lua_tostring(L, -1));

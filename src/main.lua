@@ -3,7 +3,6 @@ function V2(x, y)
 	return v
 end
 
-
 while app_is_running() do
 	app_update(0)
 	
@@ -15,6 +14,9 @@ while app_is_running() do
 	draw_text(text, V2(0,0), #text)
 	draw_circle(V2(-100,100), 50, 10)
 	draw_quad(V2(-100,-100), V2(100,100),5,5)
+	
+	local line = { V2(-10,10), V2(100,-100), V2(-50,-150), V2(-200,50) }
+	draw_polyline(line, 3, false)
 	
 	app_draw_onto_screen(true)
 end
