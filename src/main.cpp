@@ -7,6 +7,9 @@ extern "C" {
 #include <lauxlib.h>
 }
 
+// -------------------------------------------------------------------------------------------------
+// REF - Reflection API.
+
 // alloca
 #ifdef _WIN32
 	#include <malloc.h>
@@ -230,23 +233,6 @@ struct REF_Struct : public REF_Type
 	}
 };
 
-#define REF_STRUCT(T, ...) \
-	static int T##_Type_members_data_sizeof(); \
-	struct T##_Type : public REF_Struct \
-	{ \
-		using Type = T; \
-		static const REF_Member members_data[]; \
-		virtual const char* name() const { return #T; } \
-		virtual int size() const { return sizeof(T); } \
-		virtual const REF_Member* members() const { return members_data; } \
-		virtual int member_count() const { return T##_Type_members_data_sizeof(); } \
-	} g_##T##_Type; \
-	const REF_Member T##_Type::members_data[] = { __VA_ARGS__ }; \
-	static int T##_Type_members_data_sizeof() { return sizeof(T##_Type::members_data) / sizeof(*T##_Type::members_data); } \
-	template <> struct REF_TypeGetter<T> { static const REF_Type* get() { return &g_##T##_Type; } }
-
-#define REF_MEMBER(m) { #m, CF_OFFSET_OF(Type, m), REF_GetType<decltype(((Type*)0)->m)>() }
-
 // An abstract representation of a typed pointer, useful for implementing generic utilities
 // for calling and binding functions/constants to Lua.
 struct REF_Variable
@@ -415,17 +401,6 @@ int REF_LuaCFunction(lua_State* L)
 	return ret.type->size() > 0 ? 1 : 0;
 }
 
-// Call this from `main`.
-// Binds all functions registered with REF_BIND_FUNCTION to Lua.
-void REF_BindFunctions(lua_State* L)
-{
-	for (const REF_Function* fn = REF_Function::head(); fn; fn = fn->next) {
-		lua_pushlightuserdata(L, (void*)fn);
-		lua_pushcclosure(L, REF_LuaCFunction, 1);
-		lua_setglobal(L, fn->name());
-	}
-}
-
 // Represents a global constant for binding to Lua.
 struct REF_Constant : REF_List<REF_Constant>
 {
@@ -450,12 +425,23 @@ struct REF_Constant : REF_List<REF_Constant>
 	const REF_Type* type;
 };
 
-// Call this from your `main`, binds all constants to Lua.
-void REF_BindAllConstants(lua_State* L)
+// -------------------------------------------------------------------------------------------------
+// User API.
+
+void REF_BindLua(lua_State* L)
 {
+	// Call this from your `main`, binds all constants to Lua.
 	for (const REF_Constant* c = REF_Constant::head(); c; c = c->next) {
 		c->type->lua_set(L, (void*)&c->constant);
 		lua_setglobal(L, c->name);
+	}
+	
+	// Call this from `main`.
+	// Binds all functions registered with REF_BIND_FUNCTION to Lua.
+	for (const REF_Function* fn = REF_Function::head(); fn; fn = fn->next) {
+		lua_pushlightuserdata(L, (void*)fn);
+		lua_pushcclosure(L, REF_LuaCFunction, 1);
+		lua_setglobal(L, fn->name());
 	}
 }
 
@@ -486,6 +472,25 @@ void REF_BindAllConstants(lua_State* L)
 
 // Automatically bind an enum to Lua as a bunch of constants.
 #define CF_ENUM(K, V) REF_CONSTANT(K);
+
+// Expose a struct to the reflection system.
+#define REF_STRUCT(T, ...) \
+	static int T##_Type_members_data_sizeof(); \
+	struct T##_Type : public REF_Struct \
+	{ \
+		using Type = T; \
+		static const REF_Member members_data[]; \
+		virtual const char* name() const { return #T; } \
+		virtual int size() const { return sizeof(T); } \
+		virtual const REF_Member* members() const { return members_data; } \
+		virtual int member_count() const { return T##_Type_members_data_sizeof(); } \
+	} g_##T##_Type; \
+	const REF_Member T##_Type::members_data[] = { __VA_ARGS__ }; \
+	static int T##_Type_members_data_sizeof() { return sizeof(T##_Type::members_data) / sizeof(*T##_Type::members_data); } \
+	template <> struct REF_TypeGetter<T> { static const REF_Type* get() { return &g_##T##_Type; } }
+
+// Expose a member of a struct to the reflection system.
+#define REF_MEMBER(m) { #m, CF_OFFSET_OF(Type, m), REF_GetType<decltype(((Type*)0)->m)>() }
 
 // -------------------------------------------------------------------------------------------------
 // App
@@ -1056,8 +1061,7 @@ int main(int argc, char* argv[])
 	make_app("Fancy Window Title", 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
 	lua_State* L = luaL_newstate();
 	luaL_openlibs(L);
-	REF_BindFunctions(L);
-	REF_BindAllConstants(L);
+	REF_BindLua(L);
 
 	if (luaL_loadfile(L, "../../src/main.lua") || lua_pcall(L, 0, 0, 0)) {
 		fprintf(stderr, "Error loading or executing file: %s\n", lua_tostring(L, -1));
