@@ -73,6 +73,7 @@ struct REF_Type
 	virtual void cleanup(void* v) const = 0;
 	virtual void lua_set(lua_State* L, void* v) const = 0;
 	virtual void lua_get(lua_State* L, int index, void* v) const = 0;
+	virtual int lua_flatten_count() const { return 1; }
 };
 
 // Display a helpful message if a function or constant was attempted to be bound
@@ -130,6 +131,7 @@ struct void_Type : public REF_Type
 	virtual void cleanup(void* v) const { }
 	virtual void lua_set(lua_State* L, void* v) const { }
 	virtual void lua_get(lua_State* L, int index, void* v) const { }
+	virtual int lua_flatten_count() const { return 0; }
 } g_void_Type;
 template <> struct REF_TypeGetter<void> { static const REF_Type* get() { return &g_void_Type; } };
 
@@ -172,7 +174,7 @@ struct void_ptr_Type : public REF_Type
 	virtual String to_string(void* v) const { return String::from_hex((uintptr_t)*(void**)v); }
 	virtual void cast(void* to, void* from, const REF_Type* from_type) const { assert(from_type->size() == sizeof(void*)); *(void**)to = *(void**)from; }
 	virtual void cleanup(void* v) const { }
-	virtual void lua_set(lua_State* L, void* v) const { lua_pushlightuserdata(L, *(void**)v);; }
+	virtual void lua_set(lua_State* L, void* v) const { lua_pushlightuserdata(L, *(void**)v); }
 	virtual void lua_get(lua_State* L, int index, void* v) const { *(void**)v = lua_touserdata(L, index); }
 } g_void_ptr_Type;
 template <> struct REF_TypeGetter<void*> { static const REF_Type* get() { return &g_void_ptr_Type; } };
@@ -268,10 +270,13 @@ struct REF_Struct : public REF_Type
 		const REF_Member* mptr = members();
 		for (int i = 0; i < count; ++i) {
 			const REF_Member* m = mptr + i;
-			lua_pushstring(L, m->name);
-			lua_gettable(L, index);
-			m->type->lua_get(L, -1, (char*)v + m->offset);
-			lua_pop(L, 1);
+			int n = m->type->lua_flatten_count();
+			for (int j = 0; j < n; ++j) {
+				lua_pushstring(L, m->name);
+				lua_gettable(L, index + j);
+				m->type->lua_get(L, -1, (char*)v + m->offset);
+				lua_pop(L, 1);
+			}
 		}
 	}
 };
@@ -424,8 +429,9 @@ int REF_LuaCFunction(lua_State* L)
 	}
 
 	// Fetch each parameter from Lua.
-	for (int i = 0; i < param_count; i++) {
-		params[i].type->lua_get(L, i + 1, params[i].v);
+	for (int i = 0, idx = 0; i < param_count; i++) {
+		params[i].type->lua_get(L, idx + 1, params[i].v);
+		idx += params[i].type->lua_flatten_count();
 	}
 
 	// Call the actual function.
@@ -468,28 +474,38 @@ struct REF_Constant : REF_List<REF_Constant>
 	const REF_Type* type;
 };
 
+#if 0 // Untested.
+// Optional helper for manually binding functions that deal with arrays.
 template <typename T>
 void REF_LuaSetArray(lua_State* L, T* data, int count)
 {
 	const REF_Type* type = REF_GetType<T>();
 	lua_newtable(L);
+	int n = type->lua_flatten_count();
 	for (int i = 0; i < count; ++i) {
 		type->lua_set(L, data + i);
-		lua_rawseti(L, -2, i + 1);
+		for (int j = n; j >= 0; n--) {
+			lua_rawseti(L, -2, i + 1 + j);
+		}
 	}
 }
+#endif
 
+// Optional helper for manually binding functions that deal with arrays.
 template <typename T>
 void REF_LuaGetArray(lua_State* L, int index, T** out_ptr, int* out_count)
 {
 	const REF_Type* type = REF_GetType<T>();
 	int count = (int)luaL_len(L, index);
 	T* out = (T*)cf_alloc(type->size() * count);
-	for (int i = 0; i < count; ++i) {
-		lua_rawgeti(L, index, i + 1);
-		T* t = out + i;
-		type->lua_get(L, lua_gettop(L), out + i);
-		lua_pop(L, 1);
+	T* v = out;
+	int n = type->lua_flatten_count();
+	for (int i = 0; i < count; i += n) {
+		for (int j = 0; j < n; ++j) {
+			lua_rawgeti(L, index, i + 1 + j);
+		}
+		type->lua_get(L, -n, v++);
+		lua_pop(L, n);
 	}
 	*out_ptr = out;
 	if (out_count) *out_count = count;
@@ -579,10 +595,25 @@ REF_FUNCTION(message_box);
 // -------------------------------------------------------------------------------------------------
 // Math
 
-REF_STRUCT(v2,
-	REF_MEMBER(x),
-	REF_MEMBER(y)
-);
+// Explicitly register v2 as two flattened floats. This is a lot more efficient
+// than handling vectors as tables in Lua.
+struct v2_Type : public REF_Type
+{
+	virtual const char* name() const { return "v2"; }
+	virtual int size() const { return sizeof(v2); }
+	virtual double to_number(void* v) const { return 0; }
+	virtual String to_string(void* v) const { return String(); }
+
+	virtual void cast(void* to, void* from, const REF_Type* from_type) const { assert(from_type == REF_GetType<v2>()); *(v2*)to = *(v2*)from; }
+	virtual void cleanup(void* v) const { }
+	virtual void lua_set(lua_State* L, void* v) const { lua_pushnumber(L, ((v2*)v)->x); lua_pushnumber(L, ((v2*)v)->y); }
+	virtual void lua_get(lua_State* L, int index, void* v) const { ((v2*)v)->x = (float)lua_tonumber(L, index); ((v2*)v)->y = (float)lua_tonumber(L, index + 1); }
+	virtual int lua_flatten_count() const { return 2; }
+} g_v2_Type;
+
+template <> struct REF_TypeGetter<v2> {
+	static const REF_Type* get() { return &g_v2_Type; }
+};
 
 REF_STRUCT(M2x2,
 	REF_MEMBER(x),
@@ -693,6 +724,7 @@ REF_FUNCTION(make_texture);
 REF_FUNCTION(destroy_texture);
 REF_FUNCTION(update_texture);
 // @TODO
+// Runtime wrapper, name -> vtable map
 //REF_FUNCTION(make_shader);
 REF_FUNCTION(destroy_shader);
 REF_FUNCTION(canvas_defaults);
@@ -1091,7 +1123,7 @@ REF_FUNCTION(input_set_ime_rect);
 // @TODO touch_get
 
 // -------------------------------------------------------------------------------------------------
-// joypad
+// Joypad
 
 CF_JOYPAD_POWER_LEVEL_DEFS
 CF_JOYPAD_BUTTON_DEFS
@@ -1110,24 +1142,29 @@ REF_FUNCTION(joypad_button_was_released);
 REF_FUNCTION(joypad_axis);
 
 // -------------------------------------------------------------------------------------------------
-// noise
+// Noise
 
 // @TODO Consider? Not sure how to handle CF_Pixel
+// -> Flatten the pixel to ints
+
+REF_HANDLE_TYPE(CF_Noise);
+
+REF_FUNCTION(make_noise);
 
 // -------------------------------------------------------------------------------------------------
-// time
+// Time
 
 // @TODO Global variables
 // @TODO How to deal with callbacks
 
 // -------------------------------------------------------------------------------------------------
-// version
+// Version
 
 REF_CONSTANT(CF_VERSION_STRING_COMPILED);
 REF_FUNCTION(version_string_linked);
 
 // -------------------------------------------------------------------------------------------------
-// Custom manual binding.
+// Manually bind certain, difficult to automate, functions.
 
 int wrap_draw_polyine(lua_State* L)
 {
@@ -1144,7 +1181,7 @@ int wrap_draw_polyine(lua_State* L)
 	return 0;
 }
 
-void BindCustomFunctions(lua_State* L)
+void ManuallyBindFunctions(lua_State* L)
 {
 	lua_pushcfunction(L, wrap_draw_polyine);
 	lua_setglobal(L, "draw_polyline");
@@ -1156,7 +1193,7 @@ int main(int argc, char* argv[])
 	lua_State* L = luaL_newstate();
 	luaL_openlibs(L);
 	REF_BindLua(L);
-	BindCustomFunctions(L);
+	ManuallyBindFunctions(L);
 
 	if (luaL_loadfile(L, "../../src/main.lua") || lua_pcall(L, 0, 0, 0)) {
 		fprintf(stderr, "Error loading or executing file: %s\n", lua_tostring(L, -1));
