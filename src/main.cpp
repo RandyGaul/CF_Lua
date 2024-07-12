@@ -7,8 +7,6 @@ extern "C" {
 #include <lauxlib.h>
 }
 
-#include <bind.h>
-
 // -------------------------------------------------------------------------------------------------
 // Utilities.
 
@@ -55,24 +53,7 @@ void PrintLuaStack(lua_State *L)
 	printf("\n");
 }
 
-
-int LuaCall(lua_State* L, int nargs, int nresults)
-{
-	int base = lua_gettop(L) - nargs;
-	lua_pushcfunction(L, [](lua_State* L) {
-		const char* msg = lua_tostring(L, 1);
-		if (msg) {
-			fprintf(stdout, "Lua error: %s\n", msg);
-		} else {
-			fprintf(stdout, "Unknown Lua error occurred.\n");
-		}
-		return 1;
-	});
-	lua_insert(L, base);
-	int status = lua_pcall(L, nargs, nresults, base);
-	lua_remove(L, base);
-	return status;
-}
+#include <bind.h>
 
 // Automatically bind an enum to Lua as a bunch of constants.
 #define CF_ENUM(K, V) REF_CONSTANT(K);
@@ -219,9 +200,7 @@ REF_FUNCTION(texture_defaults);
 REF_FUNCTION(make_texture);
 REF_FUNCTION(destroy_texture);
 REF_FUNCTION(update_texture);
-// @TODO
-// Runtime wrapper, name -> vtable map
-//REF_FUNCTION(make_shader);
+// make_shader manually bindings below.
 REF_FUNCTION(destroy_shader);
 REF_FUNCTION(canvas_defaults);
 REF_FUNCTION(make_canvas);
@@ -674,18 +653,41 @@ REF_FUNCTION(joypad_axis);
 // -------------------------------------------------------------------------------------------------
 // Noise
 
-// @TODO Consider? Not sure how to handle CF_Pixel
-// -> Flatten the pixel to ints
-
 REF_HANDLE_TYPE(CF_Noise);
 
 REF_FUNCTION(make_noise);
+REF_FUNCTION(make_noise_fbm);
+REF_FUNCTION(destroy_noise);
+REF_FUNCTION_EX(noise2, cf_noise2);
+REF_FUNCTION_EX(noise3, cf_noise3);
+REF_FUNCTION_EX(noise4, cf_noise4);
+// @TODO Image helpers.
 
 // -------------------------------------------------------------------------------------------------
 // Time
 
-// @TODO Global variables
-// @TODO How to deal with callbacks
+REF_GLOBAL(CF_DELTA_TIME);
+REF_GLOBAL(CF_DELTA_TIME_FIXED);
+REF_GLOBAL(CF_DELTA_TIME_INTERPOLANT);
+REF_GLOBAL(CF_TICKS);
+REF_GLOBAL(CF_PREV_TICKS);
+REF_GLOBAL(CF_SECONDS);
+REF_GLOBAL(CF_PREV_SECONDS);
+REF_GLOBAL(CF_PAUSE_TIME_LEFT);
+
+REF_FUNCTION(set_fixed_timestep);
+REF_FUNCTION(set_fixed_timestep_max_updates);
+REF_FUNCTION(set_target_framerate);
+// @TODO fixed timestep
+REF_FUNCTION(pause_for);
+REF_FUNCTION(pause_for_ticks);
+REF_FUNCTION(on_interval);
+REF_FUNCTION(between_interval);
+REF_FUNCTION(on_timestamp);
+REF_FUNCTION(is_paused);
+REF_FUNCTION(get_ticks);
+REF_FUNCTION(get_tick_frequency);
+REF_FUNCTION(sleep);
 
 // -------------------------------------------------------------------------------------------------
 // Version
@@ -763,7 +765,6 @@ void LoadShaders()
 int wrap_make_shader(lua_State* L)
 {
 	char* name_ptr;
-	PrintLuaStack(L);
 	REF_GetType<char*>()->lua_get(L, -1, &name_ptr);
 	lua_pop(L, 1);
 	String name = String(name_ptr) + "_shader";
@@ -799,12 +800,11 @@ int main(int argc, char* argv[])
 	ManuallyBindFunctions(L);
 	LoadShaders();
 
-	if (luaL_loadfile(L, "../../src/main.lua")) {
+	if (luaL_dofile(L, "../../src/main.lua")) {
 		fprintf(stderr, lua_tostring(L, -1));
-		lua_close(L);
-		return 1;
+		return -1;
 	}
-	LuaCall(L, 0, 0);
+	REF_CallLuaFunction(L, "main");
 	lua_close(L);
 
 	return 0;

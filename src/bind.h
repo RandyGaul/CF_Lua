@@ -29,6 +29,10 @@
 // Call this once from main to bind everything.
 void REF_BindLua(lua_State* L);
 
+// Syncs all global variables to Lua.
+// Callable from Lua.
+int REF_SyncGlobals(lua_State* L);
+
 // You can use this on handles/ids 64-bits in size. This gets the reflection system to treat the type
 // as a void* in order to copy the bytes around as necessary.
 #define REF_HANDLE_TYPE(H)
@@ -39,7 +43,8 @@ void REF_BindLua(lua_State* L);
 // Expose a function to the reflection system. It will be bound to Lua with a custom name.
 #define REF_FUNCTION_EX(name, F)
 
-// Expose a constant to the reflection system. This is for defines, literals, enums, etc.
+// Expose a constant to the reflection system. This is for defines, literals, enums, etc. The constant
+// will be cast to 64-bit `uintptr_t`.
 #define REF_CONSTANT(C)
 
 // Expose a struct to the reflection system.
@@ -57,6 +62,10 @@ void REF_BindLua(lua_State* L);
 
 // Expose a member of a struct to the reflection system.
 #define REF_MEMBER(T)
+
+// Expose a global variable to the reflection system. It will be bound to Lua with a matching name.
+#undef REF_GLOBAL
+#define REF_GLOBAL(G)
 
 // In some more uncommon cases you may need to manually define reflection info for your type
 // in order to customize its behavior (mainly to customize `lua_set` and `lua_get`). You can find
@@ -117,6 +126,34 @@ void REF_LuaGetArray(lua_State* L, int index, T** out_ptr, int* out_count);
 //     return 0;
 // }
 
+// Call a function in Lua.
+// The return values *must* be in an initializer list. Be sure they are proper l-values (no literals), because
+// we must write to the return values.
+// Returns the number of return values from Lua, and zero's out any remaining extra's you passed in.
+// Extra parameters in Lua will remain nil as usual.
+// You need to call `sfree` on any return'd strings.
+// 
+//     template <typename... Params>
+//     int REF_CallLuaFunction(lua_State* L, const char* fn_name, std::initializer_list<REF_Variable> return_values, Params... params)
+// 
+// Example
+// 
+//     int a, b; // Return values.
+//     REF_CallLuaFunction(L, "my_function", { a, b }, "hello", 0, -10);
+//     printf("%d, %d\n", a, b);
+// 
+//     -- In lua we have:
+//     function my_function(s, i, d)
+//         print(s, i, d)
+//         return -5, 200
+//     end
+// 
+//     Which would print the following:
+//     "hello"    0    -10
+//     -5
+//     200
+// 
+
 // -------------------------------------------------------------------------------------------------
 // REF - Reflection implementation.
 
@@ -151,6 +188,7 @@ struct REF_Type
 	virtual void lua_set(lua_State* L, void* v) const = 0;
 	virtual void lua_get(lua_State* L, int index, void* v) const = 0;
 	virtual int lua_flatten_count() const { return 1; }
+	void zero(void* v) const { CF_MEMSET(v, 0, size()); }
 };
 
 // Display a helpful message if a function or constant was attempted to be bound
@@ -589,25 +627,67 @@ void REF_LuaGetArray(lua_State* L, int index, T** out_ptr, int* out_count)
 	if (out_count) *out_count = count;
 }
 
-// -------------------------------------------------------------------------------------------------
-// User API.
-
-void REF_BindLua(lua_State* L)
+// Facilitates a call to (nearly) any Lua function.
+int REF_CallLuaFunctionHelper(lua_State* L, const char* fn_name, const REF_Variable* rets, int ret_count, const REF_Variable* params, int param_count)
 {
-	// Call this from your `main`, binds all constants to Lua.
-	for (const REF_Constant* c = REF_Constant::head(); c; c = c->next) {
-		c->type->lua_set(L, (void*)&c->constant);
-		lua_setglobal(L, c->name);
+	int base = lua_gettop(L);
+
+	// Fetch the function in Lua.
+	lua_getglobal(L, fn_name);
+	if (!lua_isfunction(L, -1)) {
+		fprintf(stderr, "Function %s not found in Lua.\n", fn_name);
+		exit(-1);
+	}
+
+	// Push all parameters onto the Lua stack.
+	for (int i = 0; i < param_count; ++i) {
+		params[i].type->lua_set(L, params[i].v);
 	}
 	
-	// Call this from `main`.
-	// Binds all functions registered with REF_BIND_FUNCTION to Lua.
-	for (const REF_Function* fn = REF_Function::head(); fn; fn = fn->next) {
-		lua_pushlightuserdata(L, (void*)fn);
-		lua_pushcclosure(L, REF_LuaCFunction, 1);
-		lua_setglobal(L, fn->name());
+	// Call the actual Lua function.
+	if (lua_pcall(L, param_count, LUA_MULTRET, 0) != LUA_OK) {
+		fprintf(stderr, "%s\n", lua_tostring(L, -1));
+		exit(-1);
+	}
+
+	// Fetch the return values.
+	int nresults = lua_gettop(L) - base;
+	if (nresults != ret_count) {
+		fprintf(stderr, "Mismatch of return values from Lua, expected %d, got %d.\n", ret_count, nresults);
+	}
+	for (int i = nresults - 1; i >= 0; --i) {
+		rets[i].type->lua_get(L, -1, rets[i].v);
+		lua_pop(L, 1);
+	}
+
+	// Zero out any missing arguments.
+	for (int i = nresults; i < ret_count; ++i) {
+		rets[i].type->zero(rets[i].v);
+	}
+
+	return nresults;
+}
+
+// Call a function in Lua.
+template <typename... Params>
+int REF_CallLuaFunction(lua_State* L, const char* fn_name, std::initializer_list<REF_Variable> return_values, Params... params)
+{
+	if constexpr (sizeof...(Params) > 0) {
+		REF_Variable params_v[] = { params... };
+		return REF_CallLuaFunctionHelper(L, fn_name, return_values.begin(), (int)return_values.size(), params_v, sizeof(params_v) / sizeof(*params_v));
+	} else {
+		return REF_CallLuaFunctionHelper(L, fn_name, return_values.begin(), (int)return_values.size(), NULL, 0);
 	}
 }
+
+// Overload for zero return values, zero parameters.
+int REF_CallLuaFunction(lua_State* L, const char* fn_name)
+{
+	return REF_CallLuaFunctionHelper(L, fn_name, NULL, 0, NULL, 0);
+}
+
+// -------------------------------------------------------------------------------------------------
+// User API.
 
 // Treat handles as void* within the reflection system.
 #undef REF_HANDLE_TYPE
@@ -658,3 +738,53 @@ void REF_BindLua(lua_State* L)
 // Expose a member of a struct to the reflection system.
 #undef REF_MEMBER
 #define REF_MEMBER(m) { #m, CF_OFFSET_OF(Type, m), REF_GetType<decltype(((Type*)0)->m)>() }
+
+struct REF_Global : REF_List<REF_Global>
+{
+	template <typename T>
+	REF_Global(const char* name, T* t)
+		: name(name)
+		, var(*t)
+	{
+	}
+	const char* name;
+	REF_Variable var;
+};
+
+// Expose a global variable to the reflection system.
+#undef REF_GLOBAL
+#define REF_GLOBAL(G) \
+	REF_Global g_##G(#G, &G)
+
+int REF_SyncGlobals(lua_State* L)
+{
+	// Sync all globals.
+	for (const REF_Global* g = REF_Global::head(); g; g = g->next) {
+		g->var.type->lua_set(L, g->var.v);
+		lua_setglobal(L, g->name);
+	}
+	return 0;
+}
+
+void REF_BindLua(lua_State* L)
+{
+	// Bind all constants.
+	for (const REF_Constant* c = REF_Constant::head(); c; c = c->next) {
+		c->type->lua_set(L, (void*)&c->constant);
+		lua_setglobal(L, c->name);
+	}
+
+	// Bind all functions.
+	for (const REF_Function* fn = REF_Function::head(); fn; fn = fn->next) {
+		lua_pushlightuserdata(L, (void*)fn);
+		lua_pushcclosure(L, REF_LuaCFunction, 1);
+		lua_setglobal(L, fn->name());
+	}
+
+	// Bind all globals.
+	REF_SyncGlobals(L);
+	
+	// Make REF_SyncGlobals callable from Lua.
+	lua_pushcfunction(L, REF_SyncGlobals);
+	lua_setglobal(L, "REF_SyncGlobals");
+}
