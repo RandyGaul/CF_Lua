@@ -131,7 +131,7 @@ void REF_LuaGetArray(lua_State* L, int index, T** out_ptr, int* out_count);
 // we must write to the return values.
 // Returns the number of return values from Lua, and zero's out any remaining extra's you passed in.
 // Extra parameters in Lua will remain nil as usual.
-// You need to call `sfree` on any return'd strings.
+// You need to call `sfree` on any return'd strings, and/or call REF_GetType<T>()->cleanup(ptr) for all return values that allocate memory.
 // 
 //     template <typename... Params>
 //     int REF_CallLuaFunction(lua_State* L, const char* fn_name, std::initializer_list<REF_Variable> return_values, Params... params)
@@ -627,7 +627,7 @@ void REF_LuaGetArray(lua_State* L, int index, T** out_ptr, int* out_count)
 	if (out_count) *out_count = count;
 }
 
-// Facilitates a call to (nearly) any Lua function.
+// Facilitates a call to any Lua function.
 int REF_CallLuaFunctionHelper(lua_State* L, const char* fn_name, const REF_Variable* rets, int ret_count, const REF_Variable* params, int param_count)
 {
 	int base = lua_gettop(L);
@@ -655,12 +655,12 @@ int REF_CallLuaFunctionHelper(lua_State* L, const char* fn_name, const REF_Varia
 	if (nresults != ret_count) {
 		fprintf(stderr, "Mismatch of return values from Lua, expected %d, got %d.\n", ret_count, nresults);
 	}
-	for (int i = nresults - 1; i >= 0; --i) {
+	for (int i = min(ret_count, nresults - 1); i >= 0; --i) {
 		rets[i].type->lua_get(L, -1, rets[i].v);
 		lua_pop(L, 1);
 	}
 
-	// Zero out any missing arguments.
+	// Zero out any remaining return values.
 	for (int i = nresults; i < ret_count; ++i) {
 		rets[i].type->zero(rets[i].v);
 	}
@@ -756,6 +756,7 @@ struct REF_Global : REF_List<REF_Global>
 #define REF_GLOBAL(G) \
 	REF_Global g_##G(#G, &G)
 
+// Sync all global variable values to Lua.
 int REF_SyncGlobals(lua_State* L)
 {
 	// Sync all globals.
@@ -766,6 +767,7 @@ int REF_SyncGlobals(lua_State* L)
 	return 0;
 }
 
+// Bind everything to Lua.
 void REF_BindLua(lua_State* L)
 {
 	// Bind all constants.
@@ -783,8 +785,4 @@ void REF_BindLua(lua_State* L)
 
 	// Bind all globals.
 	REF_SyncGlobals(L);
-	
-	// Make REF_SyncGlobals callable from Lua.
-	lua_pushcfunction(L, REF_SyncGlobals);
-	lua_setglobal(L, "REF_SyncGlobals");
 }

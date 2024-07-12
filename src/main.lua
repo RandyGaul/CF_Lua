@@ -3,17 +3,22 @@ spr = make_demo_sprite()
 sprite_play(spr, "spin")
 sprite_set_scale(spr, 4,4)
 
+function on_update()
+	sync_globals()
+	
+	print(CF_DELTA_TIME)
+	print(CF_DELTA_TIME_FIXED)
+	
+	if key_just_pressed(KEY_SPACE) then
+		message_box(MESSAGE_BOX_TYPE_ERROR, "PEN15", "TEXT OF THE ERROR MESSAGE")
+	end
+end
+
 function main()
+	set_fixed_timestep(30)
+
 	while app_is_running() do
-		app_update(0)
-		REF_SyncGlobals()
-		
-		print(CF_DELTA_TIME)
-		
-		if key_just_pressed(KEY_SPACE) then
-			message_box(MESSAGE_BOX_TYPE_ERROR, "PEN15", "TEXT OF THE ERROR MESSAGE")
-		end
-		
+		app_update("on_update")
 		draw_push_layer(1)
 		sprite_update(spr)
 		draw_sprite(spr)
@@ -26,7 +31,6 @@ function main()
 		
 		local line = { -10,10, 100,-100, -50,-150, -200,50 }
 		draw_polyline(line, 3, false)
-		
 		app_draw_onto_screen(true)
 	end
 

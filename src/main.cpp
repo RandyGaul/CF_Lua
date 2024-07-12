@@ -251,7 +251,7 @@ REF_FUNCTION(make_app);
 REF_FUNCTION(destroy_app);
 REF_FUNCTION(app_is_running);
 REF_FUNCTION(app_signal_shutdown);
-REF_FUNCTION(app_update);
+// app_update -- Wrapped explicitly below.
 REF_FUNCTION(app_draw_onto_screen);
 REF_FUNCTION(app_get_width);
 REF_FUNCTION(app_get_height);
@@ -744,6 +744,12 @@ int wrap_destroy_sprite(lua_State* L)
 	return 0;
 }
 
+int wrap_sync_globals(lua_State* L)
+{
+	REF_SyncGlobals(L);
+	return 0;
+}
+
 // -------------------------------------------------------------------------------------------------
 // Manually bind shaders.
 
@@ -774,6 +780,29 @@ int wrap_make_shader(lua_State* L)
 	return 1;
 }
 
+String g_update_name_in_lua;
+
+static void wrap_app_update_fn(void* udata)
+{
+	lua_State* L = (lua_State*)udata;
+	REF_CallLuaFunction(L, g_update_name_in_lua);
+}
+
+int wrap_app_update(lua_State* L)
+{
+	// Update with a callback.
+	if (lua_isstring(L, -1)) {
+		const char* fn_name = lua_tostring(L, -1);
+		lua_pop(L, 1);
+		g_update_name_in_lua = fn_name;
+		cf_set_update_udata(L);
+		app_update(wrap_app_update_fn);
+	} else {
+		app_update(NULL);
+	}
+	return 0;
+}
+
 // -------------------------------------------------------------------------------------------------
 // Main
 
@@ -789,6 +818,10 @@ void ManuallyBindFunctions(lua_State* L)
 	lua_setglobal(L, "make_sprite");
 	lua_pushcfunction(L, wrap_destroy_sprite);
 	lua_setglobal(L, "destroy_sprite");
+	lua_pushcfunction(L, wrap_app_update);
+	lua_setglobal(L, "app_update");
+	lua_pushcfunction(L, wrap_sync_globals);
+	lua_setglobal(L, "sync_globals");
 }
 
 int main(int argc, char* argv[])
