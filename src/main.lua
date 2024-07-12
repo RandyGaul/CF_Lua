@@ -24,7 +24,7 @@ function main()
 		draw_sprite(spr)
 		draw_pop_layer()
 		
-		local text = "Hello"
+		local text = "H<color=#32a852>el</color>lo"
 		draw_text(text, 0,0, #text)
 		draw_circle(-100,100, 50, 10)
 		draw_quad(-100,-100, 100,100, 5, 5)

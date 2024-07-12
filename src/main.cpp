@@ -678,7 +678,7 @@ REF_GLOBAL(CF_PAUSE_TIME_LEFT);
 REF_FUNCTION(set_fixed_timestep);
 REF_FUNCTION(set_fixed_timestep_max_updates);
 REF_FUNCTION(set_target_framerate);
-// @TODO fixed timestep
+// fixed timestep bindings below.
 REF_FUNCTION(pause_for);
 REF_FUNCTION(pause_for_ticks);
 REF_FUNCTION(on_interval);
