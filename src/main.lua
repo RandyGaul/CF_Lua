@@ -4,7 +4,13 @@ sprite_play(spr, "spin")
 sprite_set_scale(spr, 4,4)
 
 function on_update()
-	sync_globals()
+	REF_SyncGlobals()
+	
+	local t = { a={1,1}, b={2,2}, c=10 }
+	PrintTestStruct(t)
+	
+	local t2 = { a={1,1, 2,2, 3,3}, b={4,4, 5,5, 6,6} }
+	PrintTestArray(t2)
 	
 	print(CF_DELTA_TIME)
 	print(CF_DELTA_TIME_FIXED)

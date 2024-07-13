@@ -75,31 +75,43 @@ REF_FUNCTION(message_box);
 // -------------------------------------------------------------------------------------------------
 // Math
 
-// Explicitly register v2 as two flattened floats. This is a lot more efficient
-// than handling vectors as tables in Lua.
-struct v2_Type : public REF_Type
-{
-	virtual const char* name() const { return "v2"; }
-	virtual int size() const { return sizeof(v2); }
-	virtual double to_number(void* v) const { return 0; }
-	virtual String to_string(void* v) const { return String(); }
+CF_SHAPE_TYPE_DEFS
 
-	virtual void cast(void* to, void* from, const REF_Type* from_type) const { assert(from_type == REF_GetType<v2>()); *(v2*)to = *(v2*)from; }
-	virtual void cleanup(void* v) const { }
-	virtual void lua_set(lua_State* L, void* v) const { lua_pushnumber(L, ((v2*)v)->x); lua_pushnumber(L, ((v2*)v)->y); }
-	virtual void lua_get(lua_State* L, int index, void* v) const { ((v2*)v)->x = (float)lua_tonumber(L, index); ((v2*)v)->y = (float)lua_tonumber(L, index + 1); }
-	virtual int lua_flatten_count() const { return 2; }
-} g_v2_Type;
-template <> struct REF_TypeGetter<v2> { static const REF_Type* get() { return &g_v2_Type; } };
+// Explicitly register some math types to flatten them down to floats. This is a lot
+// faster in Lua than storing values by key'd names, as opposed to just indices.
 
-REF_STRUCT(M2x2,
-	REF_MEMBER(x),
-	REF_MEMBER(y)
-);
+#define REF_FLATTEN_FLOATS(T) \
+struct T##_Type : public REF_Type \
+{ \
+	static const int N = sizeof(T) / sizeof(float); \
+	virtual const char* name() const { return #T; } \
+	virtual int size() const { return sizeof(T); } \
+	virtual double to_number(void* v) const { return 0; } \
+	virtual String to_string(void* v) const { return String(); } \
+	virtual void cast(void* to, void* from, const REF_Type* from_type) const { assert(from_type == REF_GetType<T>()); *(T*)to = *(T*)from; } \
+	virtual void cleanup(void* v) const { } \
+	virtual void lua_set(lua_State* L, void* v) const { for (int i = 0; i < N; ++i) lua_pushnumber(L, ((float*)v)[i]); } \
+	virtual void lua_get(lua_State* L, int index, void* v) const { for (int i = 0; i < N; ++i) ((float*)v)[i] = (float)lua_tonumber(L, index + i); } \
+	virtual int lua_flatten_count() const { return N; } \
+} g_##T##_Type; \
+template <> struct REF_TypeGetter<T> { static const REF_Type* get() { return &g_##T##_Type; } }
 
-REF_STRUCT(M3x2,
-	REF_MEMBER(m),
-	REF_MEMBER(p)
+REF_FLATTEN_FLOATS(v2);
+REF_FLATTEN_FLOATS(CF_M2x2);
+REF_FLATTEN_FLOATS(CF_M3x2);
+REF_FLATTEN_FLOATS(CF_Aabb);
+REF_FLATTEN_FLOATS(CF_Rect);
+REF_FLATTEN_FLOATS(CF_Color);
+REF_FLATTEN_FLOATS(CF_Circle);
+REF_FLATTEN_FLOATS(CF_Capsule);
+REF_FLATTEN_FLOATS(CF_Raycast);
+REF_FLATTEN_FLOATS(CF_Ray);
+REF_FLATTEN_FLOATS(CF_Halfspace);
+REF_FLATTEN_FLOATS(CF_SinCos);
+
+REF_STRUCT(CF_Poly,
+	REF_MEMBER_ARRAY(verts, count),
+	REF_MEMBER_ARRAY(norms, count),
 );
 
 // -------------------------------------------------------------------------------------------------
@@ -351,23 +363,22 @@ REF_FUNCTION(clipboard_set);
 // -------------------------------------------------------------------------------------------------
 // Draw
 
-REF_STRUCT(CF_Rect,
-	REF_MEMBER(w),
-	REF_MEMBER(h),
-	REF_MEMBER(x),
-	REF_MEMBER(y),
-);
+#define REF_FLATTEN_INTS(T, N) \
+struct T##_Type : public REF_Type \
+{ \
+	virtual const char* name() const { return #T; } \
+	virtual int size() const { return sizeof(T); } \
+	virtual double to_number(void* v) const { return 0; } \
+	virtual String to_string(void* v) const { return String(); } \
+	virtual void cast(void* to, void* from, const REF_Type* from_type) const { assert(from_type == REF_GetType<T>()); *(T*)to = *(T*)from; } \
+	virtual void cleanup(void* v) const { } \
+	virtual void lua_set(lua_State* L, void* v) const { for (int i = 0; i < N; ++i) lua_pushinteger(L, ((int*)v)[i]); } \
+	virtual void lua_get(lua_State* L, int index, void* v) const { for (int i = 0; i < N; ++i) ((int*)v)[i] = (int)lua_tointeger(L, index + i); } \
+	virtual int lua_flatten_count() const { return N; } \
+} g_##T##_Type; \
+template <> struct REF_TypeGetter<T> { static const REF_Type* get() { return &g_##T##_Type; } }
 
-REF_STRUCT(CF_Color,
-	REF_MEMBER(r),
-	REF_MEMBER(g),
-	REF_MEMBER(b),
-	REF_MEMBER(a),
-);
-
-REF_STRUCT(CF_Pixel,
-	REF_MEMBER(val),
-);
+REF_FLATTEN_INTS(CF_Pixel, 1);
 
 REF_FUNCTION_EX(draw_sprite, cf_draw_sprite);
 REF_FUNCTION_EX(sprite_update, cf_sprite_update);
@@ -404,16 +415,14 @@ REF_FUNCTION_EX(sprite_set_play_speed_multiplier, cf_sprite_set_play_speed_multi
 REF_FUNCTION_EX(sprite_get_loop_count, cf_sprite_get_loop_count);
 // The rest of sprite stuff bound manually below.
 
-void wrap_draw_quad(v2 min, v2 max, float thickness, float chubbiness) { draw_quad(make_aabb(min, max), thickness, chubbiness); }
-REF_FUNCTION_EX(draw_quad, wrap_draw_quad);
-void wrap_draw_quad_fill(v2 min, v2 max, float chubbiness) { draw_quad_fill(make_aabb(min, max), chubbiness); }
-REF_FUNCTION_EX(draw_quad_fill, wrap_draw_quad_fill);
-REF_FUNCTION_EX(draw_box, wrap_draw_quad);
-REF_FUNCTION_EX(draw_box_fill, wrap_draw_quad_fill);
-REF_FUNCTION_EX(draw_circle, cf_draw_circle2);
-REF_FUNCTION_EX(draw_circle_fill, cf_draw_circle_fill2);
-REF_FUNCTION_EX(draw_capsule, cf_draw_capsule2);
-REF_FUNCTION_EX(draw_capsule_fill, cf_draw_capsule_fill2);
+REF_FUNCTION_EX(draw_quad, cf_draw_quad);
+REF_FUNCTION_EX(draw_quad_fill, cf_draw_quad_fill);
+REF_FUNCTION_EX(draw_box, cf_draw_quad);
+REF_FUNCTION_EX(draw_box_fill, cf_draw_quad_fill);
+REF_FUNCTION_EX(draw_circle, cf_draw_circle);
+REF_FUNCTION_EX(draw_circle_fill, cf_draw_circle_fill);
+REF_FUNCTION_EX(draw_capsule, cf_draw_capsule);
+REF_FUNCTION_EX(draw_capsule_fill, cf_draw_capsule_fill);
 REF_FUNCTION(draw_tri);
 REF_FUNCTION(draw_tri_fill);
 REF_FUNCTION(draw_line);
@@ -455,9 +464,11 @@ REF_FUNCTION(peek_font_blur);
 REF_FUNCTION(push_text_wrap_width);
 REF_FUNCTION(pop_text_wrap_width);
 REF_FUNCTION(peek_text_wrap_width);
-// @TODO REF_FUNCTION(push_text_clip_box);
-// @TODO REF_FUNCTION(pop_text_clip_box);
-// @TODO REF_FUNCTION(peek_text_clip_box);
+
+REF_FUNCTION(push_text_clip_box);
+REF_FUNCTION(pop_text_clip_box);
+REF_FUNCTION(peek_text_clip_box);
+
 REF_FUNCTION(text_width);
 REF_FUNCTION(text_height);
 REF_FUNCTION(text_size);
@@ -703,13 +714,12 @@ REF_FUNCTION(version_string_linked);
 // -------------------------------------------------------------------------------------------------
 // Manually bind certain, difficult to automate, functions.
 
-int wrap_draw_polyine(lua_State* L)
+int wrap_draw_polyline(lua_State* L)
 {
 	v2* pts;
-	int count;
 	float thickness;
 	bool loop;
-	REF_LuaGetArray(L, 1, &pts, &count);
+	int count = REF_LuaGetDynamicArray(L, 1, &pts);
 	REF_GetType<float>()->lua_get(L, 2, &thickness);
 	REF_GetType<bool>()->lua_get(L, 3, &loop);
 	lua_pop(L, 3);
@@ -717,6 +727,7 @@ int wrap_draw_polyine(lua_State* L)
 	cf_free(pts);
 	return 0;
 }
+REF_WRAP_MANUAL(wrap_draw_polyline);
 
 CF_MemoryPool* g_sprite_pool;
 int wrap_make_demo_sprite(lua_State* L)
@@ -727,6 +738,7 @@ int wrap_make_demo_sprite(lua_State* L)
 	REF_GetType<CF_Sprite*>()->lua_set(L, &s);
 	return 1;
 }
+REF_WRAP_MANUAL(wrap_make_demo_sprite);
 
 int wrap_make_sprite(lua_State* L)
 {
@@ -739,6 +751,7 @@ int wrap_make_sprite(lua_State* L)
 	REF_GetType<CF_Sprite*>()->lua_set(L, &s);
 	return 1;
 }
+REF_WRAP_MANUAL(wrap_make_sprite);
 
 int wrap_destroy_sprite(lua_State* L)
 {
@@ -748,12 +761,7 @@ int wrap_destroy_sprite(lua_State* L)
 	memory_pool_free(g_sprite_pool, s);
 	return 0;
 }
-
-int wrap_sync_globals(lua_State* L)
-{
-	REF_SyncGlobals(L);
-	return 0;
-}
+REF_WRAP_MANUAL(wrap_destroy_sprite);
 
 // -------------------------------------------------------------------------------------------------
 // Manually bind shaders.
@@ -784,9 +792,9 @@ int wrap_make_shader(lua_State* L)
 	REF_GetType<CF_Shader>()->lua_set(L, &shd);
 	return 1;
 }
+REF_WRAP_MANUAL(wrap_make_shader);
 
 String g_update_name_in_lua;
-
 static void wrap_app_update_fn(void* udata)
 {
 	lua_State* L = (lua_State*)udata;
@@ -807,27 +815,79 @@ int wrap_app_update(lua_State* L)
 	}
 	return 0;
 }
+REF_WRAP_MANUAL(wrap_app_update);
 
 // -------------------------------------------------------------------------------------------------
 // Main
 
-void ManuallyBindFunctions(lua_State* L)
+struct TestStruct
 {
-	lua_pushcfunction(L, wrap_draw_polyine);
-	lua_setglobal(L, "draw_polyline");
-	lua_pushcfunction(L, wrap_make_shader);
-	lua_setglobal(L, "make_shader");
-	lua_pushcfunction(L, wrap_make_demo_sprite);
-	lua_setglobal(L, "make_demo_sprite");
-	lua_pushcfunction(L, wrap_make_sprite);
-	lua_setglobal(L, "make_sprite");
-	lua_pushcfunction(L, wrap_destroy_sprite);
-	lua_setglobal(L, "destroy_sprite");
-	lua_pushcfunction(L, wrap_app_update);
-	lua_setglobal(L, "app_update");
-	lua_pushcfunction(L, wrap_sync_globals);
-	lua_setglobal(L, "sync_globals");
+	v2 a;
+	v2 b;
+	int c;
+};
+
+REF_STRUCT(TestStruct,
+	REF_MEMBER(a),
+	REF_MEMBER(b),
+	REF_MEMBER(c),
+);
+
+void PrintTestStruct(TestStruct t)
+{
+	printf("%f\n", t.a.x);
+	printf("%f\n", t.a.y);
+	printf("%f\n", t.b.x);
+	printf("%f\n", t.b.y);
+	printf("%d\n", t.c);
+	printf("---\n");
 }
+
+REF_FUNCTION(PrintTestStruct);
+
+struct TestArray
+{
+	int n;
+	v2 a[3];
+	v2 b[3];
+};
+
+REF_STRUCT(TestArray,
+	REF_MEMBER_ARRAY(a, n),
+	REF_MEMBER_ARRAY(b, n),
+);
+
+void PrintTestArray(TestArray t)
+{
+	for (int i = 0; i < t.n; ++i) {
+		printf("%f\n", t.a[i].x);
+		printf("%f\n", t.a[i].y);
+	}
+	for (int i = 0; i < t.n; ++i) {
+		printf("%f\n", t.b[i].x);
+		printf("%f\n", t.b[i].y);
+	}
+	printf("---\n");
+}
+
+TestArray GetTestArray()
+{
+	TestArray t;
+	t.n = 2;
+	float i = 0;
+	for (int i = 0; i < t.n; ++i) {
+		t.a[i] = V2(i,i);
+		i++;
+	}
+	for (int i = 0; i < t.n; ++i) {
+		t.b[i] = V2(i,i);
+		i++;
+	}
+	return t;
+}
+
+REF_FUNCTION(PrintTestArray);
+REF_FUNCTION(GetTestArray);
 
 int main(int argc, char* argv[])
 {
@@ -835,7 +895,6 @@ int main(int argc, char* argv[])
 	lua_State* L = luaL_newstate();
 	luaL_openlibs(L);
 	REF_BindLua(L);
-	ManuallyBindFunctions(L);
 	LoadShaders();
 
 	if (luaL_dofile(L, "../../src/main.lua")) {
