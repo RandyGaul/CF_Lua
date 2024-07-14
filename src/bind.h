@@ -1,4 +1,4 @@
-// Binds most kinds of C code to Lua using template metaprogramming techniques. The techniques
+// Binds most C code to Lua using template metaprogramming techniques. The techniques
 // were learned from John Edwards - https://www.youtube.com/watch?v=hWDZ3Yy-NMA
 // This technique heavily reduces boilerplate, and scales up very well, typically only costing
 // one-line per type/function you wish to bind.
@@ -13,12 +13,7 @@
 // Documentation
 
 // REF stands for reflection. This header works by collecting information about C-types in code, and
-// implements some higher level algorithms for automating Lua bindings. It's also quite possible to
-// implement a variety of automated extensions such as serialization, or generalized functors, but
-// I highly recommend to not go down that rabbit hole. The utility of these sort of automation tools
-// lays mostly within decisions on restricting scope down to essentials. This header does *not*
-// support non-POD (plain old data) types, and sticks to fundamental types (e.g. ints/floats) and
-// structs.
+// implements some higher level algorithms for automating Lua bindings.
 // 
 // To get going you must register your types with the reflection by calling a variety of macros. They
 // are designed ot be mostly one-liners. Once done, call `REF_BindLua` once from main, and that's it.
@@ -125,7 +120,7 @@ int REF_SyncGlobals(lua_State* L);
 // Call a function in Lua.
 // The return values *must* be in an initializer list. Be sure they are proper l-values (no literals), because
 // we must write to the return values.
-// Returns the number of return values from Lua, and zero's out any remaining extra's you passed in.
+// Returns the number of return values from Lua, and zero's out any remaining return value's you passed in.
 // Extra parameters in Lua will remain nil as usual.
 // You need to call `sfree` on any return'd strings, and/or call REF_GetType<T>()->cleanup(ptr) for all return values that allocate memory.
 // 
@@ -389,14 +384,12 @@ void REF_LuaSetArray(lua_State* L, void* v, const REF_Type* type, int count)
 {
 	int n = type->lua_flatten_count();
 	int count_n = count * n;
+	int table = lua_gettop(L);
 	for (int i = 0; i < count_n; i += n) {
-		PrintLuaStack(L);
 		type->lua_set(L, v);
-		PrintLuaStack(L);
 		v = (void*)(((uintptr_t)v) + type->size());
 		for (int j = n - 1; j >= 0; --j) {
-			lua_rawseti(L, -j - 2, i + 1 + j);
-		PrintLuaStack(L);
+			lua_rawseti(L, table, i + j + 1);
 		}
 	}
 }
@@ -440,48 +433,38 @@ struct REF_Struct : public REF_Type
 
 	virtual void lua_set(lua_State* L, void* v) const
 	{
-		lua_newtable(L);
 		int count = member_count();
 		const REF_Member* mptr = members();
+		lua_newtable(L);
+
+		// Set each struct member one at a time.
 		for (int i = 0; i < count; ++i) {
 			const REF_Member* m = mptr + i;
 			void* mv = (void*)((uintptr_t)v + m->offset);
-			PrintLuaStack(L);
+			lua_pushstring(L, m->name);
 			if (m->is_array()) {
 				// Set an array.
-				lua_pushstring(L, m->name);
 				lua_newtable(L);
-			PrintLuaStack(L);
 				int n = 0;
 				REF_GetType<int>()->cast(&n, (void*)((uintptr_t)v + m->array_count_offset), m->array_count_type);
 				REF_LuaSetArray(L, mv, m->type, n);
-			PrintLuaStack(L);
-				lua_settable(L, -3);
-			PrintLuaStack(L);
 			} else {
 				// Non-array member.
-				lua_pushstring(L, m->name);
-			PrintLuaStack(L);
 				int n = m->type->lua_flatten_count();
 				if (n > 1) {
 					// Sets flattened types as indexed arrays.
 					lua_newtable(L);
-			PrintLuaStack(L);
+					int table = lua_gettop(L);
 					m->type->lua_set(L, mv);
-					for (int j = 0; j < n; ++j) {
-						lua_rawset(L, j + 1);
+					for (int j = n - 1; j >= 0; --j) {
+						lua_rawseti(L, table, j + 1);
 					}
-			PrintLuaStack(L);
-					lua_pop(L, n);
-			PrintLuaStack(L);
 				} else {
 					// Set the string-key'd value.
 					m->type->lua_set(L, mv);
-			PrintLuaStack(L);
 				}
-				lua_settable(L, -3);
-			PrintLuaStack(L);
 			}
+			lua_settable(L, -3);
 		}
 	}
 
@@ -734,7 +717,7 @@ int REF_CallLuaFunctionHelper(lua_State* L, const char* fn_name, const REF_Varia
 	for (int i = 0; i < param_count; ++i) {
 		params[i].type->lua_set(L, params[i].v);
 	}
-	
+
 	// Call the actual Lua function.
 	if (lua_pcall(L, param_count, LUA_MULTRET, 0) != LUA_OK) {
 		fprintf(stderr, "%s\n", lua_tostring(L, -1));
@@ -747,7 +730,7 @@ int REF_CallLuaFunctionHelper(lua_State* L, const char* fn_name, const REF_Varia
 		fprintf(stderr, "Mismatch of return values from Lua, expected %d, got %d.\n", ret_count, nresults);
 	}
 	for (int i = min(ret_count, nresults - 1); i >= 0; --i) {
-		rets[i].type->lua_get(L, -1, rets[i].v);
+		rets[i].type->lua_get(L, lua_gettop(L), rets[i].v);
 		lua_pop(L, 1);
 	}
 
@@ -830,6 +813,7 @@ int REF_CallLuaFunction(lua_State* L, const char* fn_name)
 #undef REF_MEMBER
 #define REF_MEMBER(m) { #m, CF_OFFSET_OF(Type, m), REF_GetType<decltype(((Type*)0)->m)>(), NULL, 0, NULL }
 
+// Expose an array to the reflection system (not dynamically allocated).
 #define REF_MEMBER_ARRAY(m, count) \
 	{ #m, CF_OFFSET_OF(Type, m), REF_GetType<decltype(((Type*)0)->m)>(), \
 	  #count, CF_OFFSET_OF(Type, count), REF_GetType<decltype(((Type*)0)->count)>() }
@@ -908,4 +892,5 @@ void REF_BindLua(lua_State* L)
 	REF_SyncGlobals(L);
 }
 
+// Make this callable from Lua.
 REF_WRAP_MANUAL(REF_SyncGlobals);

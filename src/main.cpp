@@ -7,6 +7,8 @@ extern "C" {
 #include <lauxlib.h>
 }
 
+lua_State* L;
+
 // -------------------------------------------------------------------------------------------------
 // Utilities.
 
@@ -79,7 +81,6 @@ CF_SHAPE_TYPE_DEFS
 
 // Explicitly register some math types to flatten them down to floats. This is a lot
 // faster in Lua than storing values by key'd names, as opposed to just indices.
-
 #define REF_FLATTEN_FLOATS(T) \
 struct T##_Type : public REF_Type \
 { \
@@ -113,6 +114,71 @@ REF_STRUCT(CF_Poly,
 	REF_MEMBER_ARRAY(verts, count),
 	REF_MEMBER_ARRAY(norms, count),
 );
+
+REF_STRUCT(CF_SliceOutput,
+	REF_MEMBER(front),
+	REF_MEMBER(back),
+);
+
+REF_FUNCTION(ray_to_halfspace);
+REF_FUNCTION(center_of_mass);
+REF_FUNCTION(calc_area);
+REF_FUNCTION(slice);
+
+int wrap_make_poly(lua_State* L)
+{
+	v2* pts;
+	int count = REF_LuaGetDynamicArray(L, lua_gettop(L), &pts);
+	lua_pop(L, 1);
+	count = hull(pts, count);
+	CF_Poly p;
+	p.count = count;
+	CF_MEMCPY(p.verts, pts, sizeof(v2) * count);
+	cf_free(pts);
+	norms(p.verts, p.norms, count);
+	REF_GetType<CF_Poly>()->lua_set(L, &p);
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_make_poly);
+
+REF_FUNCTION(circle_to_circle);
+REF_FUNCTION(circle_to_aabb);
+REF_FUNCTION(circle_to_capsule);
+REF_FUNCTION(aabb_to_aabb);
+REF_FUNCTION(aabb_to_capsule);
+REF_FUNCTION(capsule_to_capsule);
+
+bool wrap_circle_to_poly(CF_Circle A, CF_Poly B) { return circle_to_poly(A, &B, NULL); }
+REF_FUNCTION_EX(circle_to_poly, wrap_circle_to_poly);
+bool wrap_aabb_to_poly(CF_Aabb A, CF_Poly B) { return aabb_to_poly(A, &B, NULL); }
+REF_FUNCTION_EX(aabb_to_poly, wrap_aabb_to_poly);
+bool wrap_capsule_to_poly(CF_Capsule A, CF_Poly B) { return capsule_to_poly(A, &B, NULL); }
+REF_FUNCTION_EX(capsule_to_poly, wrap_capsule_to_poly);
+bool wrap_poly_to_poly(CF_Poly A, CF_Poly B) { return poly_to_poly(&A, NULL, &B, NULL); }
+REF_FUNCTION_EX(poly_to_poly, wrap_poly_to_poly);
+
+REF_FUNCTION(ray_to_circle);
+REF_FUNCTION(ray_to_capsule);
+REF_FUNCTION(ray_to_aabb);
+REF_FUNCTION(ray_to_poly);
+
+REF_STRUCT(CF_Manifold,
+	REF_MEMBER(count),
+	REF_MEMBER_ARRAY(depths, count),
+	REF_MEMBER_ARRAY(contact_points, count),
+	REF_MEMBER(n),
+);
+
+REF_FUNCTION(circle_to_circle_manifold);
+REF_FUNCTION(circle_to_aabb_manifold);
+REF_FUNCTION(circle_to_capsule_manifold);
+REF_FUNCTION(aabb_to_aabb_manifold);
+REF_FUNCTION(aabb_to_capsule_manifold);
+REF_FUNCTION(capsule_to_capsule_manifold);
+REF_FUNCTION(circle_to_poly_manifold);
+REF_FUNCTION(aabb_to_poly_manifold);
+REF_FUNCTION(capsule_to_poly_manifold);
+REF_FUNCTION(poly_to_poly_manifold);
 
 // -------------------------------------------------------------------------------------------------
 // Graphics
@@ -474,7 +540,55 @@ REF_FUNCTION(text_height);
 REF_FUNCTION(text_size);
 REF_FUNCTION(draw_text);
 
-// @TODO Text FX
+REF_STRUCT(CF_TextEffect,
+	REF_MEMBER(effect_name),
+	REF_MEMBER(on_begin),
+	REF_MEMBER(on_end),
+	REF_MEMBER(character),
+	REF_MEMBER(index_into_string),
+	REF_MEMBER(index_into_effect),
+	REF_MEMBER(glyph_count),
+	REF_MEMBER(elapsed),
+	REF_MEMBER(center),
+	REF_MEMBER(q0),
+	REF_MEMBER(q1),
+	REF_MEMBER(w),
+	REF_MEMBER(h),
+	REF_MEMBER(color),
+	REF_MEMBER(opacity),
+	REF_MEMBER(xadvance),
+	REF_MEMBER(visible),
+	REF_MEMBER(font_size),
+);
+
+// Wrap custom text fx in Lua by mapping fx names to lua function names.
+Map<const char*, const char*> g_fx_name_to_lua_fn_name;
+bool wrap_text_fx_fn(TextEffect* fx)
+{
+	CF_TextEffect effect = *(CF_TextEffect*)fx;
+	const char* lua_fn_name = g_fx_name_to_lua_fn_name.find(sintern(effect.effect_name));
+	assert(lua_fn_name);
+	bool keep_going;
+	REF_CallLuaFunction(L, lua_fn_name, { keep_going, effect }, effect);
+
+	// Keep old pointer around, as Lua overwrote it with a dynamic string.
+	const char* old_name_ptr = fx->effect_name;
+	*(CF_TextEffect*)fx = effect;
+	fx->effect_name = old_name_ptr;
+	sfree(effect.effect_name);
+
+	return keep_going;
+}
+int wrap_text_effect_register(lua_State* L)
+{
+	const char* fx_name = sintern(lua_tostring(L, -2));
+	const char* lua_fn_name = sintern(lua_tostring(L, -1));
+	g_fx_name_to_lua_fn_name.add(fx_name, lua_fn_name);
+	text_effect_register(fx_name, wrap_text_fx_fn);
+	lua_pop(L, 2);
+	return 0;
+}
+REF_WRAP_MANUAL(wrap_text_effect_register);
 
 REF_FUNCTION(render_settings_filter);
 REF_FUNCTION(render_settings_push_viewport);
@@ -511,12 +625,126 @@ REF_FUNCTION(screen_to_world);
 
 REF_FUNCTION(render_to);
 
-// @TODO fetch_image
+REF_STRUCT(CF_TemporaryImage,
+	REF_MEMBER(tex),
+	REF_MEMBER(w),
+	REF_MEMBER(h),
+	REF_MEMBER(u),
+	REF_MEMBER(v),
+);
+
+REF_FUNCTION_EX(fetch_image, cf_fetch_image);
 
 // -------------------------------------------------------------------------------------------------
 // File I/O
 
-// @TODO file system
+CF_FILE_TYPE_DEFS
+
+REF_HANDLE_TYPE(CF_File);
+
+REF_STRUCT(CF_Stat,
+	REF_MEMBER(type),
+	REF_MEMBER(is_read_only),
+	REF_MEMBER(size),
+	REF_MEMBER(last_modified_time),
+	REF_MEMBER(created_time),
+	REF_MEMBER(last_accessed_time),
+);
+
+REF_FUNCTION(fs_get_base_directory);
+REF_FUNCTION(fs_set_write_directory);
+REF_FUNCTION(fs_get_user_directory);
+REF_FUNCTION(fs_mount);
+REF_FUNCTION(fs_dismount);
+
+int wrap_fs_stat(lua_State* L)
+{
+	const char* path = lua_tostring(L, -1);
+	CF_Stat stat;
+	bool ok = !is_error(fs_stat(path, &stat));
+	lua_pop(L, 1);
+	if (ok) {
+		REF_GetType<CF_Stat>()->lua_set(L, &stat);
+		return 1;
+	} else {
+		return 0;
+	}
+}
+REF_WRAP_MANUAL(wrap_fs_stat);
+
+REF_FUNCTION(fs_create_file);
+REF_FUNCTION(fs_open_file_for_write);
+REF_FUNCTION(fs_open_file_for_append);
+REF_FUNCTION(fs_open_file_for_read);
+REF_FUNCTION(fs_close);
+REF_FUNCTION(fs_remove);
+REF_FUNCTION(fs_create_directory);
+
+int wrap_fs_enumerate_directory(lua_State* L)
+{
+	const char* path = lua_tostring(L, -1);
+	const char** list = cf_fs_enumerate_directory(path);
+	lua_pop(L, 1);
+	if (!list) return 0;
+	lua_newtable(L);
+	int idx = 1;
+	for (const char** i = list; *i; ++i) {
+		lua_pushstring(L, *i);
+		lua_rawseti(L, -2, idx++);
+	}
+	cf_fs_free_enumerated_directory(list);
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_fs_enumerate_directory);
+
+REF_FUNCTION(fs_file_exists);
+
+int wrap_fs_read(lua_State* L)
+{
+	CF_File* file = (CF_File*)lua_touserdata(L, -2);
+	size_t size = lua_tointeger(L, -1);
+	char* buffer = (char*)cf_alloc(size + 1);
+	buffer[size] = 0;
+	size_t read = fs_read(file, buffer, size);
+	lua_pop(L, 2);
+	lua_pushstring(L, buffer);
+	lua_pushinteger(L, read);
+	cf_free(buffer);
+	return 2;
+}
+REF_WRAP_MANUAL(wrap_fs_read);
+
+int wrap_fs_write(lua_State* L)
+{
+	CF_File* file = (CF_File*)lua_touserdata(L, -3);
+	const char* data = lua_tostring(L, -2);
+	size_t size = lua_tointeger(L, -1);
+	size_t written = fs_write(file, data, size);
+	lua_pop(L, 3);
+	lua_pushinteger(L, written);
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_fs_write);
+
+REF_FUNCTION(fs_eof);
+REF_FUNCTION(fs_tell);
+REF_FUNCTION(fs_size);
+
+int wrap_fs_read_entire_file_to_memory(lua_State* L)
+{
+	const char* path = lua_tostring(L, -1);
+	lua_pop(L, 1);
+	size_t sz = 0;
+	char* data = (char*)fs_read_entire_file_to_memory_and_nul_terminate(path, &sz);
+	if (!data) return 0;
+	lua_pushstring(L, data);
+	lua_pushinteger(L, sz);
+	return 2;
+}
+REF_WRAP_MANUAL(wrap_fs_read_entire_file_to_memory);
+
+REF_FUNCTION(fs_get_backend_specific_error_message);
+REF_FUNCTION(fs_get_actual_path);
 
 // -------------------------------------------------------------------------------------------------
 // haptics
@@ -644,8 +872,50 @@ REF_FUNCTION(input_is_ime_enabled);
 REF_FUNCTION(input_has_ime_keyboard_support);
 REF_FUNCTION(input_is_ime_keyboard_shown);
 REF_FUNCTION(input_set_ime_rect);
-// @TODO input_get_ime_composition
-// @TODO touch_get
+
+REF_STRUCT(CF_ImeComposition,
+	REF_MEMBER(composition),
+	REF_MEMBER(cursor),
+	REF_MEMBER(selection_len),
+);
+
+REF_FUNCTION(input_get_ime_composition);
+
+REF_STRUCT(CF_Touch,
+	REF_MEMBER(id),
+	REF_MEMBER(x),
+	REF_MEMBER(y),
+	REF_MEMBER(pressure),
+);
+
+int wrap_touch_get(lua_State* L)
+{
+	uint64_t id = (uint64_t)lua_tointeger(L, -1);
+	lua_pop(L, 1);
+	CF_Touch touch;
+	bool ok = touch_get(id, &touch);
+	lua_pushboolean(L, ok);
+	if (ok) {
+		REF_GetType<CF_Touch>()->lua_set(L, &touch);
+		return 2;
+	} else {
+		return 1;
+	}
+}
+REF_WRAP_MANUAL(wrap_touch_get);
+
+int wrap_touch_get_all(lua_State* L)
+{
+	CF_Touch* touches = NULL;
+	int touch_count = cf_touch_get_all(&touches);
+	lua_newtable(L);
+	for (int i = 0; i < touch_count; ++i) {
+		REF_GetType<CF_Touch>()->lua_set(L, touches + i);
+		lua_rawseti(L, -2, i + 1);
+	}
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_touch_get_all);
 
 // -------------------------------------------------------------------------------------------------
 // Joypad
@@ -677,6 +947,7 @@ REF_FUNCTION(destroy_noise);
 REF_FUNCTION_EX(noise2, cf_noise2);
 REF_FUNCTION_EX(noise3, cf_noise3);
 REF_FUNCTION_EX(noise4, cf_noise4);
+
 // @TODO Image helpers.
 
 // -------------------------------------------------------------------------------------------------
@@ -694,7 +965,28 @@ REF_GLOBAL(CF_PAUSE_TIME_LEFT);
 REF_FUNCTION(set_fixed_timestep);
 REF_FUNCTION(set_fixed_timestep_max_updates);
 REF_FUNCTION(set_target_framerate);
-// fixed timestep bindings below.
+
+String g_update_name_in_lua;
+static void wrap_app_update_fn(void* udata)
+{
+	REF_CallLuaFunction(L, g_update_name_in_lua);
+}
+
+int wrap_app_update(lua_State* L)
+{
+	// Update with a callback.
+	if (lua_isstring(L, -1)) {
+		const char* fn_name = lua_tostring(L, -1);
+		lua_pop(L, 1);
+		g_update_name_in_lua = fn_name;
+		app_update(wrap_app_update_fn);
+	} else {
+		app_update(NULL);
+	}
+	return 0;
+}
+REF_WRAP_MANUAL(wrap_app_update);
+
 REF_FUNCTION(pause_for);
 REF_FUNCTION(pause_for_ticks);
 REF_FUNCTION(on_interval);
@@ -716,12 +1008,13 @@ REF_FUNCTION(version_string_linked);
 
 int wrap_draw_polyline(lua_State* L)
 {
+	int base = lua_gettop(L);
 	v2* pts;
 	float thickness;
 	bool loop;
-	int count = REF_LuaGetDynamicArray(L, 1, &pts);
-	REF_GetType<float>()->lua_get(L, 2, &thickness);
-	REF_GetType<bool>()->lua_get(L, 3, &loop);
+	int count = REF_LuaGetDynamicArray(L, base-2, &pts);
+	REF_GetType<float>()->lua_get(L, base-1, &thickness);
+	REF_GetType<bool>()->lua_get(L, base, &loop);
 	lua_pop(L, 3);
 	draw_polyline(pts, count, thickness, loop);
 	cf_free(pts);
@@ -794,107 +1087,13 @@ int wrap_make_shader(lua_State* L)
 }
 REF_WRAP_MANUAL(wrap_make_shader);
 
-String g_update_name_in_lua;
-static void wrap_app_update_fn(void* udata)
-{
-	lua_State* L = (lua_State*)udata;
-	REF_CallLuaFunction(L, g_update_name_in_lua);
-}
-
-int wrap_app_update(lua_State* L)
-{
-	// Update with a callback.
-	if (lua_isstring(L, -1)) {
-		const char* fn_name = lua_tostring(L, -1);
-		lua_pop(L, 1);
-		g_update_name_in_lua = fn_name;
-		cf_set_update_udata(L);
-		app_update(wrap_app_update_fn);
-	} else {
-		app_update(NULL);
-	}
-	return 0;
-}
-REF_WRAP_MANUAL(wrap_app_update);
-
 // -------------------------------------------------------------------------------------------------
 // Main
-
-struct TestStruct
-{
-	v2 a;
-	v2 b;
-	int c;
-};
-
-REF_STRUCT(TestStruct,
-	REF_MEMBER(a),
-	REF_MEMBER(b),
-	REF_MEMBER(c),
-);
-
-void PrintTestStruct(TestStruct t)
-{
-	printf("%f\n", t.a.x);
-	printf("%f\n", t.a.y);
-	printf("%f\n", t.b.x);
-	printf("%f\n", t.b.y);
-	printf("%d\n", t.c);
-	printf("---\n");
-}
-
-REF_FUNCTION(PrintTestStruct);
-
-struct TestArray
-{
-	int n;
-	v2 a[3];
-	v2 b[3];
-};
-
-REF_STRUCT(TestArray,
-	REF_MEMBER_ARRAY(a, n),
-	REF_MEMBER_ARRAY(b, n),
-);
-
-void PrintTestArray(TestArray t)
-{
-	for (int i = 0; i < t.n; ++i) {
-		printf("%f\n", t.a[i].x);
-		printf("%f\n", t.a[i].y);
-	}
-	for (int i = 0; i < t.n; ++i) {
-		printf("%f\n", t.b[i].x);
-		printf("%f\n", t.b[i].y);
-	}
-	printf("---\n");
-}
-
-TestArray GetTestArray()
-{
-	TestArray t;
-	t.n = 2;
-	float i = 0;
-	for (int i = 0; i < t.n; ++i) {
-		float f = (float)(i+1);
-		t.a[i] = V2(f,f+1);
-		i++;
-	}
-	for (int i = 0; i < t.n; ++i) {
-		float f = (float)(i+1);
-		t.b[i] = V2(f,f+1);
-		i++;
-	}
-	return t;
-}
-
-REF_FUNCTION(PrintTestArray);
-REF_FUNCTION(GetTestArray);
 
 int main(int argc, char* argv[])
 {
 	make_app("Fancy Window Title", 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
-	lua_State* L = luaL_newstate();
+	::L = luaL_newstate();
 	luaL_openlibs(L);
 	REF_BindLua(L);
 	LoadShaders();

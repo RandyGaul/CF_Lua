@@ -6,33 +6,23 @@ sprite_set_scale(spr, 4,4)
 function on_update()
 	REF_SyncGlobals()
 	
-	local t = { a={1,1}, b={2,2}, c=10 }
-	PrintTestStruct(t)
-	
-	local t2 = { a={1,1, 2,2, 3,3}, b={4,4, 5,5, 6,6} }
-	PrintTestArray(t2)
-	
-	print("GetTestArray")
-	local t3 = GetTestArray()
-	local n = #t3.a
-	for i=1,#t3.a*2 do
-		print(t3.a[i])
-	end
-	for i=1,#t3.b*2 do
-		print(t3.b[i])
-	end
-	print("---")
-	
-	print(CF_DELTA_TIME)
-	print(CF_DELTA_TIME_FIXED)
-	
 	if key_just_pressed(KEY_SPACE) then
 		message_box(MESSAGE_BOX_TYPE_ERROR, "PEN15", "TEXT OF THE ERROR MESSAGE")
 	end
 end
 
+function blue_text(fx)
+	if fx.on_begin then
+		fx.color = { 1, 0, 0, 1 }
+	else
+		fx.color = { 0, 0, 1, 1 }
+	end
+	return true, fx
+end
+
 function main()
 	set_fixed_timestep(30)
+	text_effect_register("blue", "blue_text")
 
 	while app_is_running() do
 		app_update("on_update")
@@ -41,13 +31,11 @@ function main()
 		draw_sprite(spr)
 		draw_pop_layer()
 		
-		local text = "H<color=#32a852>el</color>lo"
-		draw_text(text, 0,0, #text)
-		draw_circle(-100,100, 50, 10)
-		draw_quad(-100,-100, 100,100, 5, 5)
+		--local text = "<blue>Hello</blue>"
+		--draw_text(text, 100,0, #text)
+		--draw_circle(-100,100, 50, 10)
+		--draw_quad(-100,-100, 100,100, 5, 5)
 		
-		local line = { -10,10, 100,-100, -50,-150, -200,50 }
-		draw_polyline(line, 3, false)
 		app_draw_onto_screen(true)
 	end
 
