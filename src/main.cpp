@@ -876,11 +876,13 @@ TestArray GetTestArray()
 	t.n = 2;
 	float i = 0;
 	for (int i = 0; i < t.n; ++i) {
-		t.a[i] = V2(i,i);
+		float f = (float)(i+1);
+		t.a[i] = V2(f,f+1);
 		i++;
 	}
 	for (int i = 0; i < t.n; ++i) {
-		t.b[i] = V2(i,i);
+		float f = (float)(i+1);
+		t.b[i] = V2(f,f+1);
 		i++;
 	}
 	return t;

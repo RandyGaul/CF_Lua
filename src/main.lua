@@ -12,6 +12,17 @@ function on_update()
 	local t2 = { a={1,1, 2,2, 3,3}, b={4,4, 5,5, 6,6} }
 	PrintTestArray(t2)
 	
+	print("GetTestArray")
+	local t3 = GetTestArray()
+	local n = #t3.a
+	for i=1,#t3.a*2 do
+		print(t3.a[i])
+	end
+	for i=1,#t3.b*2 do
+		print(t3.b[i])
+	end
+	print("---")
+	
 	print(CF_DELTA_TIME)
 	print(CF_DELTA_TIME_FIXED)
 	

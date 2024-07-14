@@ -388,11 +388,15 @@ int REF_LuaGetStaticArray(lua_State* L, int index, T* v, int max_count)
 void REF_LuaSetArray(lua_State* L, void* v, const REF_Type* type, int count)
 {
 	int n = type->lua_flatten_count();
-	for (int i = 0; i < count; ++i) {
+	int count_n = count * n;
+	for (int i = 0; i < count_n; i += n) {
+		PrintLuaStack(L);
 		type->lua_set(L, v);
+		PrintLuaStack(L);
 		v = (void*)(((uintptr_t)v) + type->size());
-		for (int j = n; j >= 0; n--) {
-			lua_rawseti(L, -n, i + 1 + j);
+		for (int j = n - 1; j >= 0; --j) {
+			lua_rawseti(L, -j - 2, i + 1 + j);
+		PrintLuaStack(L);
 		}
 	}
 }
@@ -442,23 +446,41 @@ struct REF_Struct : public REF_Type
 		for (int i = 0; i < count; ++i) {
 			const REF_Member* m = mptr + i;
 			void* mv = (void*)((uintptr_t)v + m->offset);
+			PrintLuaStack(L);
 			if (m->is_array()) {
 				// Set an array.
 				lua_pushstring(L, m->name);
 				lua_newtable(L);
+			PrintLuaStack(L);
 				int n = 0;
 				REF_GetType<int>()->cast(&n, (void*)((uintptr_t)v + m->array_count_offset), m->array_count_type);
 				REF_LuaSetArray(L, mv, m->type, n);
+			PrintLuaStack(L);
 				lua_settable(L, -3);
+			PrintLuaStack(L);
 			} else {
-				// WORKING HERE
 				// Non-array member.
+				lua_pushstring(L, m->name);
+			PrintLuaStack(L);
 				int n = m->type->lua_flatten_count();
 				if (n > 1) {
-					// Read in flattened types as indexed arrays.
+					// Sets flattened types as indexed arrays.
+					lua_newtable(L);
+			PrintLuaStack(L);
+					m->type->lua_set(L, mv);
+					for (int j = 0; j < n; ++j) {
+						lua_rawset(L, j + 1);
+					}
+			PrintLuaStack(L);
+					lua_pop(L, n);
+			PrintLuaStack(L);
 				} else {
-					// Read in string-key'd member.
+					// Set the string-key'd value.
+					m->type->lua_set(L, mv);
+			PrintLuaStack(L);
 				}
+				lua_settable(L, -3);
+			PrintLuaStack(L);
 			}
 		}
 	}
