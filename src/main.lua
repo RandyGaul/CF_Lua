@@ -31,10 +31,10 @@ function main()
 		draw_sprite(spr)
 		draw_pop_layer()
 		
-		--local text = "<blue>Hello</blue>"
-		--draw_text(text, 100,0, #text)
-		--draw_circle(-100,100, 50, 10)
-		--draw_quad(-100,-100, 100,100, 5, 5)
+		local text = "<blue>Hello</blue>"
+		draw_text(text, 150,0, #text)
+		draw_circle(-100,100, 50, 10)
+		draw_quad(-100,-100, 100,100, 5, 5)
 		
 		app_draw_onto_screen(true)
 	end

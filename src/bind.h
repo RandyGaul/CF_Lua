@@ -58,9 +58,15 @@ int REF_SyncGlobals(lua_State* L);
 // Expose a member of a struct to the reflection system.
 #define REF_MEMBER(T)
 
+// Expose a member array of a struct to the reflection system. Does not support dynamic arrays.
+#define REF_MEMBER_ARRAY(T, count)
+
 // Expose a global variable to the reflection system. It will be bound to Lua with a matching name.
-#undef REF_GLOBAL
 #define REF_GLOBAL(G)
+
+// Wraps a manually written function and removes prefix "wrap_" from the name bound to Lua.
+// This means functions with the signature: int func(lua_State* L)
+#undef REF_WRAP_MANUAL(F)
 
 // In some more uncommon cases you may need to manually define reflection info for your type
 // in order to customize its behavior (mainly to customize `lua_set` and `lua_get`). You can find
@@ -357,7 +363,7 @@ void REF_LuaGetArray(lua_State* L, int index, const REF_Type* type, void* v, int
 	}
 }
 
-// Optional helper for manually binding functions that deal with arrays.
+// Helper for manually binding functions that deal with arrays.
 template <typename T>
 int REF_LuaGetDynamicArray(lua_State* L, int index, T** out_ptr)
 {
@@ -366,17 +372,6 @@ int REF_LuaGetDynamicArray(lua_State* L, int index, T** out_ptr)
 	T* v = (T*)cf_alloc(type->size() * count);
 	REF_LuaGetArray(L, index, type, v, count);
 	*out_ptr = v;
-	return count;
-}
-
-// Optional helper for manually binding functions that deal with arrays.
-template <typename T>
-int REF_LuaGetStaticArray(lua_State* L, int index, T* v, int max_count)
-{
-	const REF_Type* type = REF_GetType<T>();
-	int count = (int)luaL_len(L, index) / type->lua_flatten_count();
-	assert(count < max_count);
-	REF_LuaGetArray(L, index, type, v, count);
 	return count;
 }
 
@@ -814,6 +809,7 @@ int REF_CallLuaFunction(lua_State* L, const char* fn_name)
 #define REF_MEMBER(m) { #m, CF_OFFSET_OF(Type, m), REF_GetType<decltype(((Type*)0)->m)>(), NULL, 0, NULL }
 
 // Expose an array to the reflection system (not dynamically allocated).
+#undef REF_MEMBER_ARRAY
 #define REF_MEMBER_ARRAY(m, count) \
 	{ #m, CF_OFFSET_OF(Type, m), REF_GetType<decltype(((Type*)0)->m)>(), \
 	  #count, CF_OFFSET_OF(Type, count), REF_GetType<decltype(((Type*)0)->count)>() }
@@ -848,6 +844,7 @@ int REF_SyncGlobals(lua_State* L)
 
 // Bind a manually wrapped Lua function.
 // The "wrap_" prefix is automatically removed from the bound name.
+#undef REF_WRAP_MANUAL
 #define REF_WRAP_MANUAL(F) \
 	REF_WrapBinder g_##F##_WrapManual(#F, F)
 
