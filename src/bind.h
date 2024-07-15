@@ -542,8 +542,14 @@ struct REF_Struct : public REF_Type
 			const REF_Member* m = mptr + i;
 			lua_pushstring(L, m->name);
 			lua_gettable(L, index);
-			assert(!lua_isnil(L, -1));
 			void* mv = (void*)((uintptr_t)v + m->offset);
+			if (lua_isnil(L, -1)) {
+				// Ignore missing keys -- often in Lua it's convenient to just
+				// not set certain struct members.
+				lua_pop(L, 1);
+				m->type->zero(mv);
+				continue;
+			}
 			if (m->is_array()) {
 				// Read in an array.
 				assert(lua_istable(L, -1));
@@ -559,7 +565,7 @@ struct REF_Struct : public REF_Type
 					for (int j = 0; j < n; ++j) {
 						lua_rawgeti(L, index + 1, j + 1);
 					}
-					m->type->lua_get(L, lua_gettop(L)-n, mv);
+					m->type->lua_get(L, lua_gettop(L)-n+1, mv);
 					lua_pop(L, n);
 				} else {
 					// Read in string-key'd member.
@@ -590,7 +596,7 @@ struct REF_Variable
 	int array_count = 0;
 };
 
-#define REF_Array(V, C) REF_Variable(V, true, (int)C)
+#define REF_Array(V, C) REF_Variable(*V, true, (int)C)
 
 // Syntactic sugar to cast from one type to another.
 template <typename T>
@@ -712,10 +718,6 @@ struct REF_Function : public REF_List<REF_Function>
 	const char* name() const { return m_name; }
 	const REF_FunctionSignature& sig() const { return m_sig; }
 
-	REF_Function& Array(int param_index, int count_index)
-	{
-	}
-
 private:
 	const char* m_name;
 	REF_FunctionSignature m_sig;
@@ -747,6 +749,10 @@ int REF_LuaCFunction(lua_State* L)
 	}
 
 	// Fetch each parameter from Lua.
+	if (lua_gettop(L) < param_count) {
+		fprintf(stderr, "Mismatch of parameter count when calling %s.\n", fn->name());
+		exit(-1);
+	}
 	for (int i = 0, idx = 0; i < param_count; i++) {
 		params[i].type->lua_get(L, idx + 1, params[i].v);
 		idx += params[i].type->lua_flatten_count();
@@ -813,21 +819,20 @@ int REF_CallLuaFunctionHelper(lua_State* L, const char* fn_name, const REF_Varia
 	}
 
 	// Push all parameters onto the Lua stack.
+	int flattened_param_count = 0;
 	for (int i = 0; i < param_count; ++i) {
 		if (params[i].is_array) {
 			lua_newtable(L);
-			int n = params[i].array_count;
-			for (int j = 0; j < n; ++j) {
-				params[i].type->lua_set(L, params[i].v);
-				lua_rawseti(L, -1, j + 1);
-			}
+			REF_LuaSetArray(L, params[i].v, params[i].type, params[i].array_count);
+			++flattened_param_count;
 		} else {
 			params[i].type->lua_set(L, params[i].v);
+			flattened_param_count += params[i].type->lua_flatten_count();
 		}
 	}
 
 	// Call the actual Lua function.
-	if (lua_pcall(L, param_count, LUA_MULTRET, 0) != LUA_OK) {
+	if (lua_pcall(L, flattened_param_count, LUA_MULTRET, 0) != LUA_OK) {
 		fprintf(stderr, "%s\n", lua_tostring(L, -1));
 		exit(-1);
 	}

@@ -927,6 +927,7 @@ REF_FUNCTION(version_string_linked);
 // -------------------------------------------------------------------------------------------------
 // Manually bind certain, difficult to automate, functions.
 
+// array of verts, thickness, loop
 int wrap_draw_polyline(lua_State* L)
 {
 	int base = lua_gettop(L);
