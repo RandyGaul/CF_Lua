@@ -21,6 +21,12 @@ FetchContent_Declare(
 	GIT_REPOSITORY https://github.com/RandyGaul/cute_framework
 )
 FetchContent_MakeAvailable(cute)
+FetchContent_Declare(
+	box2d
+	GIT_REPOSITORY https://github.com/erincatto/box2c
+	GIT_TAG main
+)
+FetchContent_MakeAvailable(box2d)
 
 # Define the Lua library
 add_library(Lua
@@ -30,6 +36,7 @@ add_library(Lua
 # Add source for the game.
 add_executable(
 	CF_Lua
+	src/bind.h
 	src/main.cpp
 )
 
@@ -45,6 +52,7 @@ endif()
 
 target_link_libraries(CF_Lua cute)
 target_link_libraries(CF_Lua Lua)
+target_link_libraries(CF_Lua box2d)
 
 # For convenience set MSVC debugger's working directory in the build folder.
 # Also ask MSVC to make CF_Lua the startup project.

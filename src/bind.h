@@ -9,6 +9,15 @@
 
 #pragma once
 
+#include <cute.h>
+using namespace Cute;
+
+extern "C" {
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
+}
+
 // -------------------------------------------------------------------------------------------------
 // Documentation
 
@@ -28,8 +37,7 @@ void REF_BindLua(lua_State* L);
 // Callable from Lua.
 int REF_SyncGlobals(lua_State* L);
 
-// You can use this on handles/ids 64-bits in size. This gets the reflection system to treat the type
-// as a void* in order to copy the bytes around as necessary.
+// You can use this on handles/ids 32/64-bits in size.
 #define REF_HANDLE_TYPE(H)
 
 // Expose a function to the reflection system. It will be bound to Lua with a matching name.
@@ -66,7 +74,7 @@ int REF_SyncGlobals(lua_State* L);
 
 // Wraps a manually written function and removes prefix "wrap_" from the name bound to Lua.
 // This means functions with the signature: int func(lua_State* L)
-#undef REF_WRAP_MANUAL(F)
+#define REF_WRAP_MANUAL(F)
 
 // In some more uncommon cases you may need to manually define reflection info for your type
 // in order to customize its behavior (mainly to customize `lua_set` and `lua_get`). You can find
@@ -154,15 +162,6 @@ int REF_SyncGlobals(lua_State* L);
 // -------------------------------------------------------------------------------------------------
 // REF - Reflection implementation.
 
-#include <cute.h>
-using namespace Cute;
-
-extern "C" {
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
-}
-
 // alloca
 #ifdef _WIN32
 	#include <malloc.h>
@@ -171,6 +170,49 @@ extern "C" {
 #endif
 
 #include <utility>
+
+// For debugging.
+inline void REF_PrintLuaStack(lua_State *L)
+{
+	int top = lua_gettop(L);
+	printf("Lua stack (top to bottom):\n");
+	for (int i = top; i >= 1; i--) {
+		int type = lua_type(L, i);
+		switch (type) {
+			case LUA_TNIL:
+				printf("[%d] NIL\n", i);
+				break;
+			case LUA_TBOOLEAN:
+				printf("[%d] %s\n", i, lua_toboolean(L, i) ? "true" : "false");
+				break;
+			case LUA_TNUMBER:
+				printf("[%d] %f\n", i, lua_tonumber(L, i));
+				break;
+			case LUA_TSTRING:
+				printf("[%d] '%s'\n", i, lua_tostring(L, i));
+				break;
+			case LUA_TTABLE:
+				printf("[%d] TABLE\n", i);
+				break;
+			case LUA_TFUNCTION:
+				printf("[%d] FUNCTION\n", i);
+				break;
+			case LUA_TUSERDATA:
+				printf("[%d] USERDATA\n", i);
+				break;
+			case LUA_TTHREAD:
+				printf("[%d] THREAD\n", i);
+				break;
+			case LUA_TLIGHTUSERDATA:
+				printf("[%d] LIGHTUSERDATA\n", i);
+				break;
+			default:
+				printf("[%d] Unknown type\n", i);
+				break;
+		}
+	}
+	printf("\n");
+}
 
 // An abstract representation of types in C++, used to write generic routines
 // for binding things to Lua.
@@ -195,7 +237,8 @@ struct REF_TypeGetter
 {
 	static const REF_Type* get()
 	{
-		static_assert(sizeof(T) == -1, "Type not registered with reflection.");
+		static_assert(sizeof(T) == -1, "Type not registered with reflection, see below error line for the offending type.");
+		T = T; // Ensure the type is printed to the output console.
 		return NULL;
 	}
 };
@@ -348,6 +391,24 @@ struct String_Type : public REF_Type
 	virtual void lua_get(lua_State* L, int index, void* v) const { *(String*)v = String(lua_tostring(L, index)); }
 } g_String_Type;
 template <> struct REF_TypeGetter<String> { static const REF_Type* get() { return &g_String_Type; } };
+
+// Explicitly register some math types to flatten them down to floats. This is a lot
+// faster in Lua than storing values by key'd names, as opposed to just indices.
+#define REF_FLATTEN_FLOATS(T) \
+struct T##_Type : public REF_Type \
+{ \
+	static const int N = sizeof(T) / sizeof(float); \
+	virtual const char* name() const { return #T; } \
+	virtual int size() const { return sizeof(T); } \
+	virtual double to_number(void* v) const { return 0; } \
+	virtual String to_string(void* v) const { return String(); } \
+	virtual void cast(void* to, void* from, const REF_Type* from_type) const { assert(from_type == REF_GetType<T>()); *(T*)to = *(T*)from; } \
+	virtual void cleanup(void* v) const { } \
+	virtual void lua_set(lua_State* L, void* v) const { for (int i = 0; i < N; ++i) lua_pushnumber(L, ((float*)v)[i]); } \
+	virtual void lua_get(lua_State* L, int index, void* v) const { for (int i = 0; i < N; ++i) ((float*)v)[i] = (float)lua_tonumber(L, index + i); } \
+	virtual int lua_flatten_count() const { return N; } \
+} g_##T##_Type; \
+template <> struct REF_TypeGetter<T> { static const REF_Type* get() { return &g_##T##_Type; } }
 
 void REF_LuaGetArray(lua_State* L, int index, const REF_Type* type, void* v, int count)
 {
@@ -514,13 +575,27 @@ struct REF_Variable
 	const REF_Type* type = REF_GetType<void>();
 };
 
-// Syntactic sugar helper.
+// Syntactic sugar to cast from one type to another.
 template <typename T>
-T Cast(REF_Variable v)
+T REF_Cast(REF_Variable v)
 {
 	T to;
 	REF_GetType<T>()->cast(&to, v.v, v.type);
 	return to;
+}
+
+// Syntactic sugar to get a type off of the Lua stack.
+template <typename T>
+void REF_LuaGet(lua_State* L, int index, T* t)
+{
+	REF_GetType<T>()->lua_get(L, index, (void*)t);
+}
+
+// Syntactic sugar to set a type onto the Lua stack.
+template <typename T>
+void REF_LuaSet(lua_State* L, T* t)
+{
+	REF_GetType<T>()->lua_set(L, (void*)t);
 }
 
 // Stores arrays of type information to fully describe the signature of C-style function.
@@ -547,33 +622,33 @@ struct REF_FunctionSignature
 
 // Unpacks the variadic parameters as an array.
 template <typename R, typename... Params, std::size_t... I>
-R ApplyHelper(R (*fn)(Params...), REF_Variable* params, std::index_sequence<I...>)
+R REF_ApplyHelper(R (*fn)(Params...), REF_Variable* params, std::index_sequence<I...>)
 {
-	return fn(Cast<Params>(params[I])...);
+	return fn(REF_Cast<Params>(params[I])...);
 }
 
 // Calls a function in a generic way using typed pointers.
 template <typename R, typename... Params>
-void Apply(R (*fn)(Params...), REF_Variable ret, REF_Variable* params, int param_count)
+void REF_Apply(R (*fn)(Params...), REF_Variable ret, REF_Variable* params, int param_count)
 {
 	assert(param_count == sizeof...(Params));
-	R r = ApplyHelper(fn, params, std::make_index_sequence<sizeof...(Params)>());
+	R r = REF_ApplyHelper(fn, params, std::make_index_sequence<sizeof...(Params)>());
 	ret.type->cast(ret.v, &r, REF_GetType<R>());
 }
 
 // Special case to hand void return.
 template <typename... Params, std::size_t... I>
-void ApplyHelper(void (*fn)(Params...), REF_Variable* params, std::index_sequence<I...>)
+void REF_ApplyHelper(void (*fn)(Params...), REF_Variable* params, std::index_sequence<I...>)
 {
-	return fn(Cast<Params>(params[I])...);
+	return fn(REF_Cast<Params>(params[I])...);
 }
 
 // Special case to hand void return.
 template <typename... Params>
-void Apply(void (*fn)(Params...), REF_Variable ret, REF_Variable* params, int param_count)
+void REF_Apply(void (*fn)(Params...), REF_Variable ret, REF_Variable* params, int param_count)
 {
 	assert(param_count == sizeof...(Params));
-	ApplyHelper(fn, params, std::make_index_sequence<sizeof...(Params)>());
+	REF_ApplyHelper(fn, params, std::make_index_sequence<sizeof...(Params)>());
 }
 
 // Mixin-style helper class to form a linked list of instances. Used for easily looping
@@ -595,9 +670,9 @@ struct REF_List
 // Stores type information of the function pointer, useful for implementing
 // the functor object REF_Function.
 template <typename T>
-void ApplyWrapper(void (*fn)(), REF_Variable ret, REF_Variable* params, int param_count)
+void REF_ApplyWrapper(void (*fn)(), REF_Variable ret, REF_Variable* params, int param_count)
 {
-	Apply((T)fn, ret, params, param_count);
+	REF_Apply((T)fn, ret, params, param_count);
 }
 
 // A generic functor object, used to easily bind functions to Lua.
@@ -608,7 +683,7 @@ struct REF_Function : public REF_List<REF_Function>
 		: m_name(name)
 		, m_sig(fn)
 		, m_fn((void (*)())fn)
-		, m_fn_wrapper(ApplyWrapper<T>)
+		, m_fn_wrapper(REF_ApplyWrapper<T>)
 	{
 	}
 
@@ -678,14 +753,22 @@ struct REF_Constant : REF_List<REF_Constant>
 	template <typename T>
 	REF_Constant(const char* name, T t)
 		: name(name)
-		, constant((uintptr_t)t)
 	{
-		if (std::is_same<T, char*>::value || std::is_same<T, const char*>::value) {
+		if constexpr (std::is_same<T, char*>::value || std::is_same<T, const char*>::value) {
 			type = REF_GetType<char*>();
-		} else if (std::is_floating_point<T>::value) {
+			constant = (uintptr_t)t;
+		} else if constexpr (std::is_floating_point<T>::value) {
 			type = REF_GetType<double>();
-		} else if (std::is_integral<T>::value || std::is_enum<T>::value) {
+			constant = (uintptr_t)t;
+		} else if constexpr (std::is_integral<T>::value || std::is_enum<T>::value) {
 			type = REF_GetType<uint64_t>();
+			constant = (uintptr_t)t;
+		} else if constexpr (sizeof(T) == sizeof(int)) {
+			type = REF_GetType<int>();
+			constant = (uintptr_t)*(int*)&t;
+		} else if constexpr (sizeof(T) == sizeof(uint64_t)) {
+			type = REF_GetType<uint64_t>();
+			constant = *(uint64_t*)&t;
 		} else {
 			assert(false);
 		}
@@ -766,7 +849,27 @@ int REF_CallLuaFunction(lua_State* L, const char* fn_name)
 	{ \
 		static const REF_Type* get() \
 		{ \
-			return &g_void_ptr_Type; \
+			if constexpr (sizeof(H) == sizeof(void*)) { \
+				return &g_void_ptr_Type; \
+			} else if constexpr (sizeof(H) == sizeof(int)) { \
+				return &g_int_Type; \
+			} else { \
+				static_assert(sizeof(H) == sizeof(void*) || sizeof(H) == sizeof(int), "Invalid handle size, only 64/32 bit handles are supported."); \
+				return NULL; \
+			} \
+		} \
+	}
+
+// Treat handles as 32-bit int within the reflection system.
+#undef REF_HANDLE32_TYPE
+#define REF_HANDLE32_TYPE(H) \
+	template <> \
+	struct REF_TypeGetter<H> \
+	{ \
+		static const REF_Type* get() \
+		{ \
+			static_assert(sizeof(T) == sizeof(int), "Invalid handle size."); \
+			return &g_int_ptr_Type; \
 		} \
 	}
 
