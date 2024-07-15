@@ -1,7 +1,5 @@
 #include <bind.h>
 
-extern lua_State* L;
-
 // Automatically bind an enum to Lua as a bunch of constants.
 #define CF_ENUM(K, V) REF_CONSTANT(K);
 

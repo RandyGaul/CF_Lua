@@ -1,7 +1,5 @@
 #include <bind.h>
 
-extern lua_State* L;
-
 #include <box2d/box2d.h>
 
 REF_HANDLE_TYPE(b2WorldId);
@@ -147,6 +145,8 @@ REF_STRUCT(b2ShapeDef,
 	REF_MEMBER(forceContactCreation),
 	REF_MEMBER(internalValue),
 );
+
+REF_FUNCTION(b2DefaultShapeDef);
 
 REF_STRUCT(b2DistanceProxy,
 	REF_MEMBER_ARRAY(points, count),
@@ -811,12 +811,28 @@ REF_FUNCTION(b2WheelJoint_SetMotorSpeed);
 REF_FUNCTION(b2WheelJoint_GetMotorSpeed);
 REF_FUNCTION(b2WheelJoint_SetMaxMotorTorque);
 REF_FUNCTION(b2WheelJoint_GetMaxMotorTorque);
-REF_FUNCTION(b2WheelJoint_GetMotorTorque);
+REF_FUNCTION(b2WheelJoint_GetMotorTorque).Array(0,1);
 
 bool wrap_b2IsValidRay(b2RayCastInput input) { return b2IsValidRay(&input); }
 REF_FUNCTION_EX(b2IsValidRay, wrap_b2IsValidRay);
-b2Polygon wrap_b2MakePolygon(b2Hull hull, float radius) { return b2MakePolygon(&hull, radius); }
-REF_FUNCTION_EX(b2MakePolygon, wrap_b2MakePolygon);
+//b2Polygon wrap_b2MakePolygon(b2Hull hull, float radius)
+int wrap_b2MakePolygon(lua_State* L)
+{
+	int base = lua_gettop(L);
+	b2Vec2* pts;
+	float radius;
+	int count = REF_LuaGetDynamicArray(L, base-1, &pts);
+	REF_LuaGet(L, base, &radius);
+	b2Hull hull;
+	CF_MEMCPY(hull.points, pts, sizeof(b2Vec2) * count);
+	lua_pop(L, 2);
+	hull.count = count;
+	b2Polygon poly = b2MakePolygon(&hull, radius);
+	cf_free(pts);
+	REF_LuaSet(L, &poly);
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_b2MakePolygon);
 b2Polygon wrap_b2MakeOffsetPolygon(b2Hull hull, float radius, b2Transform transform) { return b2MakeOffsetPolygon(&hull, radius, transform); }
 REF_FUNCTION_EX(b2MakeOffsetPolygon, wrap_b2MakeOffsetPolygon);
 REF_FUNCTION(b2MakeSquare);
@@ -911,4 +927,309 @@ REF_FUNCTION_EX(b2CollideSmoothSegmentAndCapsule, wrap_b2CollideSmoothSegmentAnd
 b2Manifold wrap_b2CollideSmoothSegmentAndPolygon(b2SmoothSegment a, b2Transform xa, b2Polygon b, b2Transform xb) { b2DistanceCache c = { 0 }; return b2CollideSmoothSegmentAndPolygon(&a, xa, &b, xb, &c); }
 REF_FUNCTION_EX(b2CollideSmoothSegmentAndPolygon, wrap_b2CollideSmoothSegmentAndPolygon);
 
+REF_CONSTANT(b2_colorAliceBlue);
+REF_CONSTANT(b2_colorAntiqueWhite);
+REF_CONSTANT(b2_colorAqua);
+REF_CONSTANT(b2_colorAquamarine);
+REF_CONSTANT(b2_colorAzure);
+REF_CONSTANT(b2_colorBeige);
+REF_CONSTANT(b2_colorBisque);
+REF_CONSTANT(b2_colorBlack);
+REF_CONSTANT(b2_colorBlanchedAlmond);
+REF_CONSTANT(b2_colorBlue);
+REF_CONSTANT(b2_colorBlueViolet);
+REF_CONSTANT(b2_colorBrown);
+REF_CONSTANT(b2_colorBurlywood);
+REF_CONSTANT(b2_colorCadetBlue);
+REF_CONSTANT(b2_colorChartreuse);
+REF_CONSTANT(b2_colorChocolate);
+REF_CONSTANT(b2_colorCoral);
+REF_CONSTANT(b2_colorCornflowerBlue);
+REF_CONSTANT(b2_colorCornsilk);
+REF_CONSTANT(b2_colorCrimson);
+REF_CONSTANT(b2_colorCyan);
+REF_CONSTANT(b2_colorDarkBlue);
+REF_CONSTANT(b2_colorDarkCyan);
+REF_CONSTANT(b2_colorDarkGoldenrod);
+REF_CONSTANT(b2_colorDarkGray);
+REF_CONSTANT(b2_colorDarkGreen);
+REF_CONSTANT(b2_colorDarkKhaki);
+REF_CONSTANT(b2_colorDarkMagenta);
+REF_CONSTANT(b2_colorDarkOliveGreen);
+REF_CONSTANT(b2_colorDarkOrange);
+REF_CONSTANT(b2_colorDarkOrchid);
+REF_CONSTANT(b2_colorDarkRed);
+REF_CONSTANT(b2_colorDarkSalmon);
+REF_CONSTANT(b2_colorDarkSeaGreen);
+REF_CONSTANT(b2_colorDarkSlateBlue);
+REF_CONSTANT(b2_colorDarkSlateGray);
+REF_CONSTANT(b2_colorDarkTurquoise);
+REF_CONSTANT(b2_colorDarkViolet);
+REF_CONSTANT(b2_colorDeepPink);
+REF_CONSTANT(b2_colorDeepSkyBlue);
+REF_CONSTANT(b2_colorDimGray);
+REF_CONSTANT(b2_colorDodgerBlue);
+REF_CONSTANT(b2_colorFirebrick);
+REF_CONSTANT(b2_colorFloralWhite);
+REF_CONSTANT(b2_colorForestGreen);
+REF_CONSTANT(b2_colorFuchsia);
+REF_CONSTANT(b2_colorGainsboro);
+REF_CONSTANT(b2_colorGhostWhite);
+REF_CONSTANT(b2_colorGold);
+REF_CONSTANT(b2_colorGoldenrod);
+REF_CONSTANT(b2_colorGray);
+REF_CONSTANT(b2_colorGray1);
+REF_CONSTANT(b2_colorGray2);
+REF_CONSTANT(b2_colorGray3);
+REF_CONSTANT(b2_colorGray4);
+REF_CONSTANT(b2_colorGray5);
+REF_CONSTANT(b2_colorGray6);
+REF_CONSTANT(b2_colorGray7);
+REF_CONSTANT(b2_colorGray8);
+REF_CONSTANT(b2_colorGray9);
+REF_CONSTANT(b2_colorGreen);
+REF_CONSTANT(b2_colorGreenYellow);
+REF_CONSTANT(b2_colorHoneydew);
+REF_CONSTANT(b2_colorHotPink);
+REF_CONSTANT(b2_colorIndianRed);
+REF_CONSTANT(b2_colorIndigo);
+REF_CONSTANT(b2_colorIvory);
+REF_CONSTANT(b2_colorKhaki);
+REF_CONSTANT(b2_colorLavender);
+REF_CONSTANT(b2_colorLavenderBlush);
+REF_CONSTANT(b2_colorLawnGreen);
+REF_CONSTANT(b2_colorLemonChiffon);
+REF_CONSTANT(b2_colorLightBlue);
+REF_CONSTANT(b2_colorLightCoral);
+REF_CONSTANT(b2_colorLightCyan);
+REF_CONSTANT(b2_colorLightGoldenrod);
+REF_CONSTANT(b2_colorLightGoldenrodYellow);
+REF_CONSTANT(b2_colorLightGray);
+REF_CONSTANT(b2_colorLightGreen);
+REF_CONSTANT(b2_colorLightPink);
+REF_CONSTANT(b2_colorLightSalmon);
+REF_CONSTANT(b2_colorLightSeaGreen);
+REF_CONSTANT(b2_colorLightSkyBlue);
+REF_CONSTANT(b2_colorLightSlateBlue);
+REF_CONSTANT(b2_colorLightSlateGray);
+REF_CONSTANT(b2_colorLightSteelBlue);
+REF_CONSTANT(b2_colorLightYellow);
+REF_CONSTANT(b2_colorLime);
+REF_CONSTANT(b2_colorLimeGreen);
+REF_CONSTANT(b2_colorLinen);
+REF_CONSTANT(b2_colorMagenta);
+REF_CONSTANT(b2_colorMaroon);
+REF_CONSTANT(b2_colorMediumAquamarine);
+REF_CONSTANT(b2_colorMediumBlue);
+REF_CONSTANT(b2_colorMediumOrchid);
+REF_CONSTANT(b2_colorMediumPurple);
+REF_CONSTANT(b2_colorMediumSeaGreen);
+REF_CONSTANT(b2_colorMediumSlateBlue);
+REF_CONSTANT(b2_colorMediumSpringGreen);
+REF_CONSTANT(b2_colorMediumTurquoise);
+REF_CONSTANT(b2_colorMediumVioletRed);
+REF_CONSTANT(b2_colorMidnightBlue);
+REF_CONSTANT(b2_colorMintCream);
+REF_CONSTANT(b2_colorMistyRose);
+REF_CONSTANT(b2_colorMoccasin);
+REF_CONSTANT(b2_colorNavajoWhite);
+REF_CONSTANT(b2_colorNavy);
+REF_CONSTANT(b2_colorNavyBlue);
+REF_CONSTANT(b2_colorOldLace);
+REF_CONSTANT(b2_colorOlive);
+REF_CONSTANT(b2_colorOliveDrab);
+REF_CONSTANT(b2_colorOrange);
+REF_CONSTANT(b2_colorOrangeRed);
+REF_CONSTANT(b2_colorOrchid);
+REF_CONSTANT(b2_colorPaleGoldenrod);
+REF_CONSTANT(b2_colorPaleGreen);
+REF_CONSTANT(b2_colorPaleTurquoise);
+REF_CONSTANT(b2_colorPaleVioletRed);
+REF_CONSTANT(b2_colorPapayaWhip);
+REF_CONSTANT(b2_colorPeachPuff);
+REF_CONSTANT(b2_colorPeru);
+REF_CONSTANT(b2_colorPink);
+REF_CONSTANT(b2_colorPlum);
+REF_CONSTANT(b2_colorPowderBlue);
+REF_CONSTANT(b2_colorPurple);
+REF_CONSTANT(b2_colorRebeccaPurple);
+REF_CONSTANT(b2_colorRed);
+REF_CONSTANT(b2_colorRosyBrown);
+REF_CONSTANT(b2_colorRoyalBlue);
+REF_CONSTANT(b2_colorSaddleBrown);
+REF_CONSTANT(b2_colorSalmon);
+REF_CONSTANT(b2_colorSandyBrown);
+REF_CONSTANT(b2_colorSeaGreen);
+REF_CONSTANT(b2_colorSeashell);
+REF_CONSTANT(b2_colorSienna);
+REF_CONSTANT(b2_colorSilver);
+REF_CONSTANT(b2_colorSkyBlue);
+REF_CONSTANT(b2_colorSlateBlue);
+REF_CONSTANT(b2_colorSlateGray);
+REF_CONSTANT(b2_colorSnow);
+REF_CONSTANT(b2_colorSpringGreen);
+REF_CONSTANT(b2_colorSteelBlue);
+REF_CONSTANT(b2_colorTan);
+REF_CONSTANT(b2_colorTeal);
+REF_CONSTANT(b2_colorThistle);
+REF_CONSTANT(b2_colorTomato);
+REF_CONSTANT(b2_colorTurquoise);
+REF_CONSTANT(b2_colorViolet);
+REF_CONSTANT(b2_colorVioletRed);
+REF_CONSTANT(b2_colorWheat);
+REF_CONSTANT(b2_colorWhite);
+REF_CONSTANT(b2_colorWhiteSmoke);
+REF_CONSTANT(b2_colorYellow);
+REF_CONSTANT(b2_colorYellowGreen);
 
+struct b2DebugDrawSettings
+{
+	const char* draw_polygon;
+	const char* draw_solid_polygon;
+	const char* draw_circle;
+	const char* draw_solid_circle;
+	const char* draw_capsule;
+	const char* draw_solid_capsule;
+	const char* draw_segment;
+	const char* draw_transform;
+	const char* draw_point;
+	const char* draw_string;
+
+	b2AABB drawingBounds;
+	bool useDrawingBounds;
+	bool drawShapes;
+	bool drawJoints;
+	bool drawJointExtras;
+	bool drawAABBs;
+	bool drawMass;
+	bool drawContacts;
+	bool drawGraphColors;
+	bool drawContactNormals;
+	bool drawContactImpulses;
+	bool drawFrictionImpulses;
+	void* context;
+};
+
+REF_STRUCT(b2DebugDrawSettings,
+	REF_MEMBER(draw_polygon),
+	REF_MEMBER(draw_solid_polygon),
+	REF_MEMBER(draw_circle),
+	REF_MEMBER(draw_solid_circle),
+	REF_MEMBER(draw_capsule),
+	REF_MEMBER(draw_solid_capsule),
+	REF_MEMBER(draw_segment),
+	REF_MEMBER(draw_transform),
+	REF_MEMBER(draw_point),
+	REF_MEMBER(draw_string),
+	REF_MEMBER(drawingBounds),
+	REF_MEMBER(useDrawingBounds),
+	REF_MEMBER(drawShapes),
+	REF_MEMBER(drawJoints),
+	REF_MEMBER(drawJointExtras),
+	REF_MEMBER(drawAABBs),
+	REF_MEMBER(drawMass),
+	REF_MEMBER(drawContacts),
+	REF_MEMBER(drawGraphColors),
+	REF_MEMBER(drawContactNormals),
+	REF_MEMBER(drawContactImpulses),
+	REF_MEMBER(drawFrictionImpulses),
+	REF_MEMBER(context),
+);
+
+static_assert(sizeof(b2DebugDraw) == sizeof(b2DebugDrawSettings), "Must be equal, make sure to update this as Box2D changes over time.");
+
+void wrap_DrawPolygonFn(const b2Vec2* vertices, int vertexCount, b2HexColor color, void* context)
+{
+	const char* lua_fn_name = ((b2DebugDrawSettings*)context)->draw_polygon;
+	REF_CallLuaFunction(L, lua_fn_name, { }, REF_Array(vertices, vertexCount), color);
+}
+
+void wrap_DrawSolidPolygonFn(b2Transform transform, const b2Vec2* vertices, int vertexCount, float radius, b2HexColor color, void* context)
+{
+	const char* lua_fn_name = ((b2DebugDrawSettings*)context)->draw_solid_polygon;
+
+	REF_CallLuaFunction(L, lua_fn_name, { }, hull, color);
+}
+
+void wrap_DrawCircleFn(b2Vec2 center, float radius, b2HexColor color, void* context)
+{
+	const char* lua_fn_name = ((b2DebugDrawSettings*)context)->draw_circle;
+	REF_CallLuaFunction(L, lua_fn_name, { }, center, radius, color);
+}
+
+void wrap_DrawSolidCircleFn(b2Transform transform, float radius, b2HexColor color, void* context)
+{
+	const char* lua_fn_name = ((b2DebugDrawSettings*)context)->draw_solid_circle;
+	REF_CallLuaFunction(L, lua_fn_name, { }, transform, radius, color);
+}
+
+void wrap_DrawCapsuleFn(b2Vec2 p1, b2Vec2 p2, float radius, b2HexColor color, void* context)
+{
+	const char* lua_fn_name = ((b2DebugDrawSettings*)context)->draw_capsule;
+	REF_CallLuaFunction(L, lua_fn_name, { }, p1, p2, radius, color);
+}
+
+void wrap_DrawCapsuleSolidFn(b2Vec2 p1, b2Vec2 p2, float radius, b2HexColor color, void* context)
+{
+	const char* lua_fn_name = ((b2DebugDrawSettings*)context)->draw_solid_capsule;
+	REF_CallLuaFunction(L, lua_fn_name, { }, p1, p2, radius, color);
+}
+
+void wrap_DrawSegmentFn(b2Vec2 p1, b2Vec2 p2, b2HexColor color, void* context)
+{
+	const char* lua_fn_name = ((b2DebugDrawSettings*)context)->draw_segment;
+	REF_CallLuaFunction(L, lua_fn_name, { }, p1, p2, color);
+}
+
+void wrap_DrawTransformFn(b2Transform transform, void* context)
+{
+	const char* lua_fn_name = ((b2DebugDrawSettings*)context)->draw_transform;
+	REF_CallLuaFunction(L, lua_fn_name, { }, transform);
+}
+
+void wrap_DrawPointFn(b2Vec2 point, float size, b2HexColor color, void* context)
+{
+	const char* lua_fn_name = ((b2DebugDrawSettings*)context)->draw_point;
+	REF_CallLuaFunction(L, lua_fn_name, { }, point, color);
+}
+
+void wrap_DrawStringFn(b2Vec2 point, const char* string, void* context)
+{
+	const char* lua_fn_name = ((b2DebugDrawSettings*)context)->draw_string;
+	REF_CallLuaFunction(L, lua_fn_name, { }, point, string);
+}
+
+int wrap_b2World_Draw(lua_State* L)
+{
+	b2WorldId worldId = REF_Cast<b2WorldId>(lua_tointeger(L, -1));
+	b2DebugDrawSettings settings = { 0 };
+	REF_LuaGet(L, -2, &settings);
+	static b2DebugDraw dd = {
+		wrap_DrawPolygonFn,
+		wrap_DrawSolidPolygonFn,
+		wrap_DrawCircleFn,
+		wrap_DrawSolidCircleFn,
+		wrap_DrawCapsuleFn,
+		wrap_DrawCapsuleSolidFn,
+		wrap_DrawSegmentFn,
+		wrap_DrawTransformFn,
+		wrap_DrawPointFn,
+		wrap_DrawStringFn,
+	};
+	dd.drawingBounds = settings.drawingBounds;
+	dd.useDrawingBounds = settings.useDrawingBounds;
+	dd.drawShapes = settings.drawShapes;
+	dd.drawJoints = settings.drawJoints;
+	dd.drawJointExtras = settings.drawJointExtras;
+	dd.drawAABBs = settings.drawAABBs;
+	dd.drawMass = settings.drawMass;
+	dd.drawContacts = settings.drawContacts;
+	dd.drawGraphColors = settings.drawGraphColors;
+	dd.drawContactNormals = settings.drawContactNormals;
+	dd.drawFrictionImpulses = settings.drawFrictionImpulses;
+	dd.context = (void*)&settings;
+	b2World_Draw(worldId, &dd);
+	lua_pop(L, 2);
+	return 0;
+}
+REF_WRAP_MANUAL(wrap_b2World_Draw);

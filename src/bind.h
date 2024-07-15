@@ -450,6 +450,12 @@ void REF_LuaSetArray(lua_State* L, void* v, const REF_Type* type, int count)
 	}
 }
 
+template <typename T>
+void REF_LuaSetArray(lua_State* L, T* items, int count)
+{
+	REF_LuaSetArray(L, (void*)items, REF_GetType<std::remove_const<T>::type>(), count);
+}
+
 // Describes a data member of a struct.
 // Assumes plain-old-data.
 struct REF_Member
@@ -535,7 +541,8 @@ struct REF_Struct : public REF_Type
 		for (int i = 0; i < count; ++i) {
 			const REF_Member* m = mptr + i;
 			lua_pushstring(L, m->name);
-			lua_gettable(L, -2);
+			lua_gettable(L, index);
+			assert(!lua_isnil(L, -1));
 			void* mv = (void*)((uintptr_t)v + m->offset);
 			if (m->is_array()) {
 				// Read in an array.
@@ -552,11 +559,11 @@ struct REF_Struct : public REF_Type
 					for (int j = 0; j < n; ++j) {
 						lua_rawgeti(L, index + 1, j + 1);
 					}
-					m->type->lua_get(L, -n, mv);
+					m->type->lua_get(L, lua_gettop(L)-n, mv);
 					lua_pop(L, n);
 				} else {
 					// Read in string-key'd member.
-					m->type->lua_get(L, -1, mv);
+					m->type->lua_get(L, lua_gettop(L), mv);
 				}
 			}
 			lua_pop(L, 1);
@@ -569,11 +576,21 @@ struct REF_Struct : public REF_Type
 struct REF_Variable
 {
 	template <typename T>
-	REF_Variable(const T& t) { v = (void*)&t; type = REF_GetType<T>(); }
+	REF_Variable(const T& t, bool is_array = false, int array_count = 0)
+	{
+		v = (void*)&t;
+		type = REF_GetType<T>();
+		this->is_array = is_array;
+		this->array_count = array_count;
+	}
 	REF_Variable() {}
 	void* v = NULL;
 	const REF_Type* type = REF_GetType<void>();
+	bool is_array = false;
+	int array_count = 0;
 };
+
+#define REF_Array(V, C) REF_Variable(V, true, (int)C)
 
 // Syntactic sugar to cast from one type to another.
 template <typename T>
@@ -695,6 +712,10 @@ struct REF_Function : public REF_List<REF_Function>
 	const char* name() const { return m_name; }
 	const REF_FunctionSignature& sig() const { return m_sig; }
 
+	REF_Function& Array(int param_index, int count_index)
+	{
+	}
+
 private:
 	const char* m_name;
 	REF_FunctionSignature m_sig;
@@ -793,7 +814,16 @@ int REF_CallLuaFunctionHelper(lua_State* L, const char* fn_name, const REF_Varia
 
 	// Push all parameters onto the Lua stack.
 	for (int i = 0; i < param_count; ++i) {
-		params[i].type->lua_set(L, params[i].v);
+		if (params[i].is_array) {
+			lua_newtable(L);
+			int n = params[i].array_count;
+			for (int j = 0; j < n; ++j) {
+				params[i].type->lua_set(L, params[i].v);
+				lua_rawseti(L, -1, j + 1);
+			}
+		} else {
+			params[i].type->lua_set(L, params[i].v);
+		}
 	}
 
 	// Call the actual Lua function.
@@ -877,13 +907,13 @@ int REF_CallLuaFunction(lua_State* L, const char* fn_name)
 // It will be automatically bound to Lua.
 #undef REF_FUNCTION
 #define REF_FUNCTION(F) \
-	REF_Function g_##F##_REF_Function(#F, F)
+	REF_Function g_##F##_REF_Function = REF_Function(#F, F)
 
 // Expose a function to the reflection system.
 // It will be automatically bound to Lua with a custom name.
 #undef REF_FUNCTION_EX
 #define REF_FUNCTION_EX(name, F) \
-	REF_Function g_##name##_REF_Function(#name, F)
+	REF_Function g_##name##_REF_Function = REF_Function(#name, F)
 
 // Automatically bind a constant to Lua.
 #undef REF_CONSTANT

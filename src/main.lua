@@ -3,6 +3,30 @@ spr = make_demo_sprite()
 sprite_play(spr, "spin")
 sprite_set_scale(spr, 4,4)
 
+-- Setup basic box2D world
+world = b2CreateWorld(b2DefaultWorldDef())
+
+function b2CreateBox(x, y, w, h, body_type)
+	w = w * 0.5
+	h = h * 0.5
+	body_type = body_type or b2_dynamicBody
+	local def = b2DefaultBodyDef()
+	def.type = body_type
+	local body = b2CreateBody(world, def)
+	local verts = { x-w,y-h, x+w,y-h, x+w,y+h, x-w,y+h, }
+	local shape_def = b2DefaultShapeDef()
+	local poly = b2MakePolygon(verts, 0)
+	return b2CreatePolygonShape(body, shape_def, poly)
+end
+
+b0 = b2CreateBox(0, 0, 100, 20, b2_staticBody)
+
+function draw_polygon(verts, color)
+end
+
+debug_draw_settings = {
+}
+
 function on_update()
 	REF_SyncGlobals()
 	
