@@ -27,14 +27,14 @@ REF_CONSTANT(b2_defaultMaskBits);
 
 REF_CONSTANT(b2_maxPolygonVertices);
 
-REF_FLATTEN_FLOATS(b2Vec2);
-REF_FLATTEN_FLOATS(b2AABB);
-REF_FLATTEN_FLOATS(b2Transform);
-REF_FLATTEN_FLOATS(b2Circle);
-REF_FLATTEN_FLOATS(b2Capsule);
-REF_FLATTEN_FLOATS(b2Segment);
-REF_FLATTEN_FLOATS(b2Sweep);
-REF_FLATTEN_FLOATS(b2Rot);
+REF_FLAT_FLOATS(b2Vec2);
+REF_FLAT_FLOATS(b2AABB);
+REF_FLAT_FLOATS(b2Transform);
+REF_FLAT_FLOATS(b2Circle);
+REF_FLAT_FLOATS(b2Capsule);
+REF_FLAT_FLOATS(b2Segment);
+REF_FLAT_FLOATS(b2Sweep);
+REF_FLAT_FLOATS(b2Rot);
 
 REF_STRUCT(b2Polygon,
 	REF_MEMBER_ARRAY(vertices, count),
@@ -80,8 +80,8 @@ REF_STRUCT(b2WorldDef,
 	REF_MEMBER(enableSleep),
 	REF_MEMBER(enableContinous),
 	REF_MEMBER(workerCount),
-	REF_MEMBER(enqueueTask),
-	REF_MEMBER(finishTask),
+	//REF_MEMBER(enqueueTask),
+	//REF_MEMBER(finishTask),
 	REF_MEMBER(userTaskContext),
 	REF_MEMBER(internalValue),
 );
@@ -384,6 +384,7 @@ REF_FUNCTION(b2DestroyWorld);
 REF_FUNCTION(b2World_IsValid);
 REF_FUNCTION(b2World_Step);
 
+// @TODO Use REF_Array instead.
 int wrap_b2World_GetSensorEvents(lua_State* L)
 {
 	b2WorldId worldId = REF_Cast<b2WorldId>(lua_tointeger(L, -1));
@@ -439,6 +440,7 @@ int wrap_b2World_GetContactEvents(lua_State* L)
 }
 REF_WRAP_MANUAL(wrap_b2World_GetContactEvents);
 
+// @TODO Test one of these.
 bool wrap_b2OverlapResultFcn(b2ShapeId shapeId, void* context)
 {
 	const char* lua_fn_name = (const char*)context;

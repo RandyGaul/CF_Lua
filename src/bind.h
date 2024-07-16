@@ -94,7 +94,7 @@ int REF_SyncGlobals(lua_State* L);
 //     virtual void cleanup(void* v) const { }
 //     virtual void lua_set(lua_State* L, void* v) const { lua_pushnumber(L, ((v2*)v)->x); lua_pushnumber(L, ((v2*)v)->y); }
 //     virtual void lua_get(lua_State* L, int index, void* v) const { ((v2*)v)->x = (float)lua_tonumber(L, index); ((v2*)v)->y = (float)lua_tonumber(L, index + 1); }
-//     virtual int lua_flatten_count() const { return 2; }
+//     virtual int flattened_count() const { return 2; }
 // } g_v2_Type;
 // template <> struct REF_TypeGetter<v2> { static const REF_Type* get() { return &g_v2_Type; } };
 
@@ -223,10 +223,13 @@ struct REF_Type
 	virtual double to_number(void* v) const = 0;
 	virtual String to_string(void* v) const = 0;
 	virtual void cast(void* to, void* from, const REF_Type* from_type) const = 0;
-	virtual void cleanup(void* v) const = 0;
+	virtual void cleanup(void* v) const { }
+	virtual bool is_pointer() const = 0;
+	virtual const REF_Type* dereference_type() const = 0;
+	virtual const REF_Type* address_type() const = 0;
 	virtual void lua_set(lua_State* L, void* v) const = 0;
 	virtual void lua_get(lua_State* L, int index, void* v) const = 0;
-	virtual int lua_flatten_count() const { return 1; }
+	virtual int flattened_count() const { return 1; }
 	void zero(void* v) const { CF_MEMSET(v, 0, size()); }
 };
 
@@ -237,22 +240,8 @@ struct REF_TypeGetter
 {
 	static const REF_Type* get()
 	{
-		static_assert(sizeof(T) == -1, "Type not registered with reflection, see below error line for the offending type.");
-		T = T; // Ensure the type is printed to the output console.
+		//static_assert(sizeof(T) == -1, "Type not registered with reflection.");
 		return NULL;
-	}
-};
-
-// Used to consolidate all pointer types (except char*) down to a common void*.
-// This lets algorithms bind and copy around pointers by value freely, without requiring
-// explicit binds for various pointer types.
-template<typename T>
-struct REF_TypeGetter<T, typename std::enable_if<std::is_pointer<T>::value && !std::is_same<T, char*>::value && !std::is_same<T, const char*>::value>::type>
-{
-	static const REF_Type* get()
-	{
-		static const REF_Type* type = &g_void_ptr_Type;
-		return type;
 	}
 };
 
@@ -286,40 +275,74 @@ struct remove_array_extents<T[]>
 	using type = typename remove_array_extents<T>::type;
 };
 
-// Helper to fetch type info by template parameter for arrays.
+// Remove const and volatile qualifiers, including for pointer types.
+template<typename T>
+struct remove_cv
+{
+	using type = typename std::remove_cv<T>::type;
+};
+
+template<typename T>
+struct remove_cv<T*>
+{
+	using type = typename remove_cv<typename std::remove_cv<T>::type>::type*;
+};
+
+// Helper to fetch type info by template parameter.
 template<typename T>
 const REF_Type* REF_GetType()
 {
-	return REF_TypeGetter<typename remove_array_extents<T>::type>::get();
+	using BaseType = typename remove_array_extents<typename remove_cv<T>::type>::type;
+	return REF_TypeGetter<BaseType>::get();
 }
 
 // No-ops representing void, mainly for functions that return nothing.
 struct void_Type : public REF_Type
 {
-	virtual const char* name() const { return "void"; }
-	virtual int size() const { return 0; }
-	virtual double to_number(void* v) const { return 0; }
-	virtual String to_string(void* v) const { return String(); }
-	virtual void cast(void* to, void* from, const REF_Type* from_type) const { }
-	virtual void cleanup(void* v) const { }
-	virtual void lua_set(lua_State* L, void* v) const { }
-	virtual void lua_get(lua_State* L, int index, void* v) const { }
-	virtual int lua_flatten_count() const { return 0; }
+	virtual const char* name() const override { return "void"; }
+	virtual int size() const override { return 0; }
+	virtual double to_number(void* v) const override { return 0; }
+	virtual String to_string(void* v) const override { return String(); }
+	virtual void cast(void* to, void* from, const REF_Type* from_type) const override { }
+	virtual void cleanup(void* v) const override { }
+	virtual bool is_pointer() const override { return false; }
+	virtual const REF_Type* dereference_type() const override { return NULL; }
+	virtual const REF_Type* address_type() const override { return NULL; }
+	virtual void lua_set(lua_State* L, void* v) const override { }
+	virtual void lua_get(lua_State* L, int index, void* v) const override { }
+	virtual int flattened_count() const override { return 0; }
 } g_void_Type;
 template <> struct REF_TypeGetter<void> { static const REF_Type* get() { return &g_void_Type; } };
+
+struct void_Ptr_Type : public REF_Type
+{
+	virtual const char* name() const override { return "void*"; } 
+	virtual int size() const { return sizeof(void*); }
+	virtual double to_number(void* v) const override { return 0; } 
+	virtual String to_string(void* v) const override { return String::from_hex((uint64_t)v); } 
+	virtual void cast(void* to, void* from, const REF_Type* from_type) const override { assert(this == from_type); *(void**)to = *(void**)from; }
+	virtual bool is_pointer() const override { return true; } 
+	virtual const REF_Type* dereference_type() const override { return NULL; } 
+	virtual const REF_Type* address_type() const override { return REF_GetType<void**>(); } 
+	virtual void lua_set(lua_State* L, void* v) const override { lua_pushlightuserdata(L, *(void**)v); } 
+	virtual void lua_get(lua_State* L, int index, void* v) const override { *(void**)v = (void*)lua_touserdata(L, index); }
+} g_void_Ptr_Type;
+template <> struct REF_TypeGetter<void*> { static const REF_Type* get() { return &g_void_Ptr_Type; } };
 
 // Helper to reduce repetitive binds of C numeric types.
 #define REF_NUMERIC_TYPE(T) \
 	struct T##_Type : public REF_Type \
 	{ \
-		virtual const char* name() const { return #T; } \
+		virtual const char* name() const override { return #T; } \
 		virtual int size() const { return sizeof(T); } \
-		virtual double to_number(void* v) const { return (double)*(T*)v; } \
-		virtual String to_string(void* v) const { return *(T*)v; } \
-		virtual void cast(void* to, void* from, const REF_Type* from_type) const { *(T*)to = (T)from_type->to_number(from); } \
-		virtual void cleanup(void* v) const { } \
-		virtual void lua_set(lua_State* L, void* v) const { lua_pushnumber(L, (double)*(T*)v); } \
-		virtual void lua_get(lua_State* L, int index, void* v) const { *(T*)v = (T)lua_tonumber(L, index); } \
+		virtual double to_number(void* v) const override { return (double)*(T*)v; } \
+		virtual String to_string(void* v) const override { return *(T*)v; } \
+		virtual void cast(void* to, void* from, const REF_Type* from_type) const override { *(T*)to = (T)from_type->to_number(from); } \
+		virtual bool is_pointer() const override { return false; } \
+		virtual const REF_Type* dereference_type() const override { return NULL; } \
+		virtual const REF_Type* address_type() const override { return REF_GetType<T*>(); } \
+		virtual void lua_set(lua_State* L, void* v) const override { lua_pushnumber(L, (double)*(T*)v); } \
+		virtual void lua_get(lua_State* L, int index, void* v) const override { *(T*)v = (T)lua_tonumber(L, index); } \
 	} g_##T##_Type; \
 	template <> struct REF_TypeGetter<T> { static const REF_Type* get() { return &g_##T##_Type; } }
 
@@ -337,20 +360,64 @@ REF_NUMERIC_TYPE(uint32_t);
 REF_NUMERIC_TYPE(uint64_t);
 REF_NUMERIC_TYPE(int64_t);
 
-// Bind some specific types explicitly, as they don't fit nicely into the numeric macro REF_NUMERIC_TYPE.
+#define REF_PTR_TYPE(T) \
+	struct T##_Ptr_Type : public REF_Type \
+	{ \
+		virtual const char* name() const override { return #T "*"; } \
+		virtual int size() const { return sizeof(T*); } \
+		virtual double to_number(void* v) const override { return 0; } \
+		virtual String to_string(void* v) const override { return *(T**)v; } \
+		virtual void cast(void* to, void* from, const REF_Type* from_type) const override { assert(this == from_type); *(T**)to = *(T**)from; } \
+		virtual bool is_pointer() const override { return true; } \
+		virtual const REF_Type* dereference_type() const override { return REF_GetType<T>(); } \
+		virtual const REF_Type* address_type() const override { return REF_GetType<T**>(); } \
+		virtual void lua_set(lua_State* L, void* v) const override { lua_pushlightuserdata(L, *(T**)v); } \
+		virtual void lua_get(lua_State* L, int index, void* v) const override { *(T**)v = (T*)lua_touserdata(L, index); } \
+	} g_##T##_Ptr_Type; \
+	template <> struct REF_TypeGetter<T*> { static const REF_Type* get() { return &g_##T##_Ptr_Type; } }
 
-struct void_ptr_Type : public REF_Type
-{
-	virtual const char* name() const { return "void*"; }
-	virtual int size() const { return sizeof(void*); }
-	virtual double to_number(void* v) const { return (double)(uintptr_t)*(void**)v; }
-	virtual String to_string(void* v) const { return String::from_hex((uintptr_t)*(void**)v); }
-	virtual void cast(void* to, void* from, const REF_Type* from_type) const { assert(from_type->size() == sizeof(void*)); *(void**)to = *(void**)from; }
-	virtual void cleanup(void* v) const { }
-	virtual void lua_set(lua_State* L, void* v) const { lua_pushlightuserdata(L, *(void**)v); }
-	virtual void lua_get(lua_State* L, int index, void* v) const { *(void**)v = lua_touserdata(L, index); }
-} g_void_ptr_Type;
-template <> struct REF_TypeGetter<void*> { static const REF_Type* get() { return &g_void_ptr_Type; } };
+REF_PTR_TYPE(short);
+REF_PTR_TYPE(int);
+REF_PTR_TYPE(float);
+REF_PTR_TYPE(double);
+REF_PTR_TYPE(uint8_t);
+REF_PTR_TYPE(int8_t);
+REF_PTR_TYPE(uint16_t);
+//REF_PTR_TYPE(int16_t); // Just a typedef of short.
+REF_PTR_TYPE(uint32_t);
+//REF_PTR_TYPE(int32_t); // Just a typedef of int.
+REF_PTR_TYPE(uint64_t);
+REF_PTR_TYPE(int64_t);
+
+#define REF_PTR_PTR_TYPE(T) \
+	struct T##_Ptr_Ptr_Type : public REF_Type \
+	{ \
+		virtual const char* name() const override { return #T "**"; } \
+		virtual int size() const { return sizeof(T**); } \
+		virtual double to_number(void* v) const override { return 0; } \
+		virtual String to_string(void* v) const override { return *(T***)v; } \
+		virtual void cast(void* to, void* from, const REF_Type* from_type) const override { assert(this == from_type); *(T***)to = *(T***)from; } \
+		virtual bool is_pointer() const override { return true; } \
+		virtual const REF_Type* dereference_type() const override { return REF_GetType<T*>(); } \
+		virtual const REF_Type* address_type() const override { return NULL; } \
+		virtual void lua_set(lua_State* L, void* v) const override { lua_pushlightuserdata(L, *(T***)v); } \
+		virtual void lua_get(lua_State* L, int index, void* v) const override { *(T***)v = (T**)lua_touserdata(L, index); } \
+	} g_##T##_Ptr_Ptr_Type; \
+	template <> struct REF_TypeGetter<T**> { static const REF_Type* get() { return &g_##T##_Ptr_Ptr_Type; } }
+
+REF_PTR_PTR_TYPE(void);
+REF_PTR_PTR_TYPE(short);
+REF_PTR_PTR_TYPE(int);
+REF_PTR_PTR_TYPE(float);
+REF_PTR_PTR_TYPE(double);
+REF_PTR_PTR_TYPE(uint8_t);
+REF_PTR_PTR_TYPE(int8_t);
+REF_PTR_PTR_TYPE(uint16_t);
+//REF_PTR_PTR_TYPE(int16_t); // Just a typedef of short.
+REF_PTR_PTR_TYPE(uint32_t);
+//REF_PTR_PTR_TYPE(int32_t); // Just a typedef of int.
+REF_PTR_PTR_TYPE(uint64_t);
+REF_PTR_PTR_TYPE(int64_t);
 
 struct bool_Type : public REF_Type
 {
@@ -360,10 +427,15 @@ struct bool_Type : public REF_Type
 	virtual String to_string(void* v) const { return *(bool*)v ? "true" : "false"; }
 	virtual void cast(void* to, void* from, const REF_Type* from_type) const { *(bool*)to = (from_type->to_number(from) == 0.0 ? false : true); }
 	virtual void cleanup(void* v) const { }
+	virtual bool is_pointer() const override { return false; }
+	virtual const REF_Type* dereference_type() const override { return NULL; }
+	virtual const REF_Type* address_type() const override { return REF_GetType<bool*>(); }
 	virtual void lua_set(lua_State* L, void* v) const { lua_pushboolean(L, *(bool*)v); }
 	virtual void lua_get(lua_State* L, int index, void* v) const { *(bool*)v = lua_toboolean(L, index); }
 } g_bool_Type;
 template <> struct REF_TypeGetter<bool> { static const REF_Type* get() { return &g_bool_Type; } };
+REF_PTR_TYPE(bool);
+REF_PTR_PTR_TYPE(bool);
 
 struct char_ptr_Type : public REF_Type
 {
@@ -373,6 +445,9 @@ struct char_ptr_Type : public REF_Type
 	virtual String to_string(void* v) const { return *(char**)v; }
 	virtual void cast(void* to, void* from, const REF_Type* from_type) const { String s = from_type->to_string(from); *(char**)to = s.steal(); }
 	virtual void cleanup(void* v) const { sfree(*(char**)v); }
+	virtual bool is_pointer() const override { return true; }
+	virtual const REF_Type* dereference_type() const override { return REF_GetType<char>(); }
+	virtual const REF_Type* address_type() const override { return NULL; }
 	virtual void lua_set(lua_State* L, void* v) const { lua_pushstring(L, *(char**)v); }
 	virtual void lua_get(lua_State* L, int index, void* v) const { String s = lua_tostring(L, index); *(char**)v = s.steal(); }
 } g_char_ptr_Type;
@@ -387,32 +462,17 @@ struct String_Type : public REF_Type
 	virtual String to_string(void* v) const { return *(String*)v; }
 	virtual void cast(void* to, void* from, const REF_Type* from_type) const{ *(String*)to = from_type->to_string(from); }
 	virtual void cleanup(void* v) const { }
+	virtual bool is_pointer() const override { return false; }
+	virtual const REF_Type* dereference_type() const override { return REF_GetType<char>(); }
+	virtual const REF_Type* address_type() const override { return NULL; }
 	virtual void lua_set(lua_State* L, void* v) const { lua_pushstring(L, ((String*)v)->c_str()); }
 	virtual void lua_get(lua_State* L, int index, void* v) const { *(String*)v = String(lua_tostring(L, index)); }
 } g_String_Type;
 template <> struct REF_TypeGetter<String> { static const REF_Type* get() { return &g_String_Type; } };
 
-// Explicitly register some math types to flatten them down to floats. This is a lot
-// faster in Lua than storing values by key'd names, as opposed to just indices.
-#define REF_FLATTEN_FLOATS(T) \
-struct T##_Type : public REF_Type \
-{ \
-	static const int N = sizeof(T) / sizeof(float); \
-	virtual const char* name() const { return #T; } \
-	virtual int size() const { return sizeof(T); } \
-	virtual double to_number(void* v) const { return 0; } \
-	virtual String to_string(void* v) const { return String(); } \
-	virtual void cast(void* to, void* from, const REF_Type* from_type) const { assert(from_type == REF_GetType<T>()); *(T*)to = *(T*)from; } \
-	virtual void cleanup(void* v) const { } \
-	virtual void lua_set(lua_State* L, void* v) const { for (int i = 0; i < N; ++i) lua_pushnumber(L, ((float*)v)[i]); } \
-	virtual void lua_get(lua_State* L, int index, void* v) const { for (int i = 0; i < N; ++i) ((float*)v)[i] = (float)lua_tonumber(L, index + i); } \
-	virtual int lua_flatten_count() const { return N; } \
-} g_##T##_Type; \
-template <> struct REF_TypeGetter<T> { static const REF_Type* get() { return &g_##T##_Type; } }
-
 void REF_LuaGetArray(lua_State* L, int index, const REF_Type* type, void* v, int count)
 {
-	int n = type->lua_flatten_count();
+	int n = type->flattened_count();
 	int count_n = count * n;
 	for (int i = 0; i < count_n; i += n) {
 		for (int j = 0; j < n; ++j) {
@@ -429,7 +489,7 @@ template <typename T>
 int REF_LuaGetDynamicArray(lua_State* L, int index, T** out_ptr)
 {
 	const REF_Type* type = REF_GetType<T>();
-	int count = (int)luaL_len(L, index) / type->lua_flatten_count();
+	int count = (int)luaL_len(L, index) / type->flattened_count();
 	T* v = (T*)cf_alloc(type->size() * count);
 	REF_LuaGetArray(L, index, type, v, count);
 	*out_ptr = v;
@@ -438,7 +498,7 @@ int REF_LuaGetDynamicArray(lua_State* L, int index, T** out_ptr)
 
 void REF_LuaSetArray(lua_State* L, void* v, const REF_Type* type, int count)
 {
-	int n = type->lua_flatten_count();
+	int n = type->flattened_count();
 	int count_n = count * n;
 	int table = lua_gettop(L);
 	for (int i = 0; i < count_n; i += n) {
@@ -479,8 +539,8 @@ struct REF_Struct : public REF_Type
 	virtual const REF_Member* members() const = 0;
 	virtual int member_count() const = 0;
 
-	virtual double to_number(void* v) const { return 0; }
-	virtual String to_string(void* v) const { return String(); }
+	virtual double to_number(void* v) const override { return 0; }
+	virtual String to_string(void* v) const override { return String(); }
 	virtual void cast(void* to, void* from, const REF_Type* from_type) const override { assert(from_type == this); CF_MEMCPY(to, from, size()); }
 
 	virtual void cleanup(void* v) const
@@ -493,7 +553,9 @@ struct REF_Struct : public REF_Type
 		}
 	}
 
-	virtual void lua_set(lua_State* L, void* v) const
+	virtual bool is_pointer() const override { return false; }
+
+	virtual void lua_set(lua_State* L, void* v) const override
 	{
 		int count = member_count();
 		const REF_Member* mptr = members();
@@ -512,7 +574,7 @@ struct REF_Struct : public REF_Type
 				REF_LuaSetArray(L, mv, m->type, n);
 			} else {
 				// Non-array member.
-				int n = m->type->lua_flatten_count();
+				int n = m->type->flattened_count();
 				if (n > 1) {
 					// Sets flattened types as indexed arrays.
 					lua_newtable(L);
@@ -530,7 +592,7 @@ struct REF_Struct : public REF_Type
 		}
 	}
 
-	virtual void lua_get(lua_State* L, int index, void* v) const
+	virtual void lua_get(lua_State* L, int index, void* v) const override
 	{
 		assert(index > 0);
 		assert(lua_istable(L, index));
@@ -553,12 +615,12 @@ struct REF_Struct : public REF_Type
 			if (m->is_array()) {
 				// Read in an array.
 				assert(lua_istable(L, -1));
-				int n = (int)luaL_len(L, -1) / m->type->lua_flatten_count();
+				int n = (int)luaL_len(L, -1) / m->type->flattened_count();
 				m->array_count_type->cast((void*)((uintptr_t)v + m->array_count_offset), &n, REF_GetType<int>());
 				REF_LuaGetArray(L, lua_gettop(L), m->type, mv, n);
 			} else {
 				// Non-array member.
-				int n = m->type->lua_flatten_count();
+				int n = m->type->flattened_count();
 				if (n > 1) {
 					// Read in flattened types as indexed arrays.
 					assert(lua_istable(L, -1));
@@ -582,12 +644,20 @@ struct REF_Struct : public REF_Type
 struct REF_Variable
 {
 	template <typename T>
-	REF_Variable(const T& t, bool is_array = false, int array_count = 0)
+	REF_Variable(const T& t)
 	{
 		v = (void*)&t;
 		type = REF_GetType<T>();
-		this->is_array = is_array;
-		this->array_count = array_count;
+		is_array = false;
+		array_count = 0;
+	}
+	template <typename T>
+	REF_Variable(const T* t, int count)
+	{
+		v = (void*)t;
+		type = REF_GetType<T>();
+		is_array = true;
+		array_count = count;
 	}
 	REF_Variable() {}
 	void* v = NULL;
@@ -596,7 +666,8 @@ struct REF_Variable
 	int array_count = 0;
 };
 
-#define REF_Array(V, C) REF_Variable(*V, true, (int)C)
+// Very hacky helper to send arrays to Lua.
+#define REF_Array(V, count) REF_Variable(V, count)
 
 // Syntactic sugar to cast from one type to another.
 template <typename T>
@@ -755,7 +826,7 @@ int REF_LuaCFunction(lua_State* L)
 	}
 	for (int i = 0, idx = 0; i < param_count; i++) {
 		params[i].type->lua_get(L, idx + 1, params[i].v);
-		idx += params[i].type->lua_flatten_count();
+		idx += params[i].type->flattened_count();
 	}
 
 	// Call the actual function.
@@ -827,7 +898,7 @@ int REF_CallLuaFunctionHelper(lua_State* L, const char* fn_name, const REF_Varia
 			++flattened_param_count;
 		} else {
 			params[i].type->lua_set(L, params[i].v);
-			flattened_param_count += params[i].type->lua_flatten_count();
+			flattened_param_count += params[i].type->flattened_count();
 		}
 	}
 
@@ -885,7 +956,7 @@ int REF_CallLuaFunction(lua_State* L, const char* fn_name)
 		static const REF_Type* get() \
 		{ \
 			if constexpr (sizeof(H) == sizeof(void*)) { \
-				return &g_void_ptr_Type; \
+				return &g_void_Ptr_Type; \
 			} else if constexpr (sizeof(H) == sizeof(int)) { \
 				return &g_int_Type; \
 			} else { \
@@ -937,10 +1008,61 @@ int REF_CallLuaFunction(lua_State* L, const char* fn_name)
 		virtual int size() const { return sizeof(T); } \
 		virtual const REF_Member* members() const { return members_data; } \
 		virtual int member_count() const { return T##_Type_members_data_sizeof(); } \
+		virtual const REF_Type* dereference_type() const override { return NULL; } \
+		virtual const REF_Type* address_type() const override { return REF_GetType<T*>(); } \
 	} g_##T##_Type; \
 	const REF_Member T##_Type::members_data[] = { __VA_ARGS__ }; \
 	static int T##_Type_members_data_sizeof() { return sizeof(T##_Type::members_data) / sizeof(*T##_Type::members_data); } \
-	template <> struct REF_TypeGetter<T> { static const REF_Type* get() { return &g_##T##_Type; } }
+	template <> struct REF_TypeGetter<T> { static const REF_Type* get() { return &g_##T##_Type; } }; \
+	REF_PTR_TYPE(T); \
+	REF_PTR_PTR_TYPE(T)
+
+// Expose a flattened struct to the reflection system. The struct will have no
+// keys when sent to Lua and use an indexed array instead. This is much more optimized
+// and convenient for e.g. math types in Lua.
+#undef REF_FLAT_FLOATS
+#define REF_FLAT_FLOATS(T) \
+	struct T##_Type : public REF_Type \
+	{ \
+		static const int N = sizeof(T) / sizeof(float); \
+		virtual const char* name() const override { return #T; } \
+		virtual int size() const override { return sizeof(T); } \
+		virtual double to_number(void* v) const override { return 0; } \
+		virtual String to_string(void* v) const override { return String(); } \
+		virtual void cast(void* to, void* from, const REF_Type* from_type) const override { assert(from_type == REF_GetType<T>()); *(T*)to = *(T*)from; } \
+		virtual void cleanup(void* v) const override { } \
+		virtual bool is_pointer() const override { return false; } \
+		virtual const REF_Type* dereference_type() const override { return NULL; } \
+		virtual const REF_Type* address_type() const override { return REF_GetType<T*>(); } \
+		virtual void lua_set(lua_State* L, void* v) const override { for (int i = 0; i < N; ++i) lua_pushnumber(L, ((float*)v)[i]); } \
+		virtual void lua_get(lua_State* L, int index, void* v) const override { for (int i = 0; i < N; ++i) ((float*)v)[i] = (float)lua_tonumber(L, index + i); } \
+		virtual int flattened_count() const override { return N; } \
+	} g_##T##_Type; \
+	template <> struct REF_TypeGetter<T> { static const REF_Type* get() { return &g_##T##_Type; } }; \
+	REF_PTR_TYPE(T); \
+	REF_PTR_PTR_TYPE(T)
+
+#undef REF_FLAT_INTS
+#define REF_FLAT_INTS(T) \
+	struct T##_Type : public REF_Type \
+	{ \
+		static const int N = sizeof(T) / sizeof(int); \
+		virtual const char* name() const override { return #T; } \
+		virtual int size() const override { return sizeof(T); } \
+		virtual double to_number(void* v) const override { return 0; } \
+		virtual String to_string(void* v) const override { return String(); } \
+		virtual void cast(void* to, void* from, const REF_Type* from_type) const override { assert(from_type == REF_GetType<T>()); *(T*)to = *(T*)from; } \
+		virtual void cleanup(void* v) const override { } \
+		virtual bool is_pointer() const override { return false; } \
+		virtual const REF_Type* dereference_type() const override { return NULL; } \
+		virtual const REF_Type* address_type() const override { return REF_GetType<T*>(); } \
+		virtual void lua_set(lua_State* L, void* v) const override { for (int i = 0; i < N; ++i) lua_pushinteger(L, ((int*)v)[i]); } \
+		virtual void lua_get(lua_State* L, int index, void* v) const override { for (int i = 0; i < N; ++i) ((int*)v)[i] = (int)lua_tointeger(L, index + i); } \
+		virtual int flattened_count() const override { return N; } \
+	} g_##T##_Type; \
+	template <> struct REF_TypeGetter<T> { static const REF_Type* get() { return &g_##T##_Type; } }; \
+	REF_PTR_TYPE(T); \
+	REF_PTR_PTR_TYPE(T)
 
 // Expose a member of a struct to the reflection system.
 #undef REF_MEMBER

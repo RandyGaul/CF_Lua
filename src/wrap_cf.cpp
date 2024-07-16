@@ -17,23 +17,30 @@ CF_MESSAGE_BOX_TYPE_DEFS
 REF_FUNCTION(is_error);
 REF_FUNCTION(message_box);
 
+REF_PTR_TYPE(ImGuiContext);
+REF_PTR_TYPE(CF_Sprite);
+REF_PTR_TYPE(CF_File);
+REF_PTR_TYPE(CF_Joypad);
+REF_PTR_TYPE(CF_Haptic);
+
 // -------------------------------------------------------------------------------------------------
 // Math
 
 CF_SHAPE_TYPE_DEFS
 
-REF_FLATTEN_FLOATS(v2);
-REF_FLATTEN_FLOATS(CF_M2x2);
-REF_FLATTEN_FLOATS(CF_M3x2);
-REF_FLATTEN_FLOATS(CF_Aabb);
-REF_FLATTEN_FLOATS(CF_Rect);
-REF_FLATTEN_FLOATS(CF_Color);
-REF_FLATTEN_FLOATS(CF_Circle);
-REF_FLATTEN_FLOATS(CF_Capsule);
-REF_FLATTEN_FLOATS(CF_Raycast);
-REF_FLATTEN_FLOATS(CF_Ray);
-REF_FLATTEN_FLOATS(CF_Halfspace);
-REF_FLATTEN_FLOATS(CF_SinCos);
+REF_FLAT_FLOATS(v2);
+REF_FLAT_FLOATS(CF_M2x2);
+REF_FLAT_FLOATS(CF_M3x2);
+REF_FLAT_FLOATS(CF_Aabb);
+REF_FLAT_FLOATS(CF_Rect);
+REF_FLAT_FLOATS(CF_Color);
+REF_FLAT_FLOATS(CF_Circle);
+REF_FLAT_FLOATS(CF_Capsule);
+REF_FLAT_FLOATS(CF_Raycast);
+REF_FLAT_FLOATS(CF_Ray);
+REF_FLAT_FLOATS(CF_Halfspace);
+REF_FLAT_FLOATS(CF_SinCos);
+REF_FLAT_FLOATS(CF_Transform);
 
 REF_STRUCT(CF_Poly,
 	REF_MEMBER_ARRAY(verts, count),
@@ -354,22 +361,7 @@ REF_FUNCTION(clipboard_set);
 // -------------------------------------------------------------------------------------------------
 // Draw
 
-#define REF_FLATTEN_INTS(T, N) \
-struct T##_Type : public REF_Type \
-{ \
-	virtual const char* name() const { return #T; } \
-	virtual int size() const { return sizeof(T); } \
-	virtual double to_number(void* v) const { return 0; } \
-	virtual String to_string(void* v) const { return String(); } \
-	virtual void cast(void* to, void* from, const REF_Type* from_type) const { assert(from_type == REF_GetType<T>()); *(T*)to = *(T*)from; } \
-	virtual void cleanup(void* v) const { } \
-	virtual void lua_set(lua_State* L, void* v) const { for (int i = 0; i < N; ++i) lua_pushinteger(L, ((int*)v)[i]); } \
-	virtual void lua_get(lua_State* L, int index, void* v) const { for (int i = 0; i < N; ++i) ((int*)v)[i] = (int)lua_tointeger(L, index + i); } \
-	virtual int lua_flatten_count() const { return N; } \
-} g_##T##_Type; \
-template <> struct REF_TypeGetter<T> { static const REF_Type* get() { return &g_##T##_Type; } }
-
-REF_FLATTEN_INTS(CF_Pixel, 1);
+REF_FLAT_INTS(CF_Pixel);
 
 REF_FUNCTION_EX(draw_sprite, cf_draw_sprite);
 REF_FUNCTION_EX(sprite_update, cf_sprite_update);

@@ -117,7 +117,7 @@ function on_update()
 		message_box(MESSAGE_BOX_TYPE_ERROR, "PEN15", "TEXT OF THE ERROR MESSAGE")
 	end
 	
-	b2World_Step(world, CF_DELTA_TIME, 4)
+	b2World_Step(world, CF_DELTA_TIME_FIXED, 4)
 end
 
 function blue_text(fx)
