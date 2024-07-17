@@ -31,3 +31,30 @@ To compile with CMake it's easiest to just use msvc2202.cmd from the command lin
 I haven't made a elegant or well-written main.lua file yet. I'm just testing stuff out on a low-level, but it does show drawing sprites, polylines, making some rigid bodies and static geometry, and I did hook up debug drawing to Box2D.
 
 To get going I'd recommend consider wrapping the CF/Box2D Lua functions inside your own Lua wrappers. This would be a good way to tweak the API and get in optional arguments and stuff.
+
+
+~ Shaders ~
+
+Adding in new shaders should be done by placing a shader into the `shaders` folder, and then compile it with the provided compiler. You can use `compile.cmd` on the command line. Then your shader can be included into main.cpp with `ADD_SHADER` (be sure to also include your shader file in main.cpp).
+
+```cpp
+// -------------------------------------------------------------------------------------------------
+// Manually bind shaders.
+
+#include "../shaders/flash_shader.h"
+// Add your shaders here... Flash shader (line above) is just an example.
+
+// Keeps track of all available custom shaders in a global table. These can get fetched by Lua.
+// This requires us to compile shaders into the executable in C++.
+Map<const char*, CF_Shader> g_shaders;
+
+#define ADD_SHADER(S) \
+	g_shaders.add(sintern(#S "_shader"), CF_MAKE_SOKOL_SHADER(S##_shader))
+
+void LoadShaders()
+{
+	// Add more shaders here as necessary. Don't forget to include it's associated header.
+	ADD_SHADER(flash);
+	// Add your shaders here... Flash shader (line above) is just an example.
+}
+```
