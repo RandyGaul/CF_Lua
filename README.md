@@ -1,4 +1,4 @@
-~ Lua bindings notes for CF and Box2D ~
+# Lua bindings notes for CF and Box2D
 
 Arrays - When calling a C function and passing arrays over to C do *not* send in the length of the array. The array
 length gets automatically handled by the binding system.
@@ -17,7 +17,7 @@ draw_push_color(color)
 Otherwise there aren't too many quirks, and 99% of functions match 1:1 with the C function signatures.
 
 
-~ Binding New Stuff ~
+# Binding New Stuff
 
 You have CF and Box2D bindings as examples to follow if you ever want to add new stuff to Lua from C. This includes any other C library. It's possible to bind C++ libraries as well, but, they need to either written in C-style or wrapped in a C API. C++ APIs themselves are notoriously overcomplicated and don't map well to other languages. For this reason I recommend to stick just to APIs that expose simple structs/pointers/handles. Bind.h has a ton of notes at the top of the header about how to bind and expose new things to Lua.
 
@@ -33,7 +33,7 @@ I haven't made a elegant or well-written main.lua file yet. I'm just testing stu
 To get going I'd recommend consider wrapping the CF/Box2D Lua functions inside your own Lua wrappers. This would be a good way to tweak the API and get in optional arguments and stuff.
 
 
-~ Shaders ~
+# Shaders
 
 Adding in new shaders should be done by placing a shader into the `shaders` folder, and then compile it with the provided compiler. You can use `compile.cmd` on the command line. Then your shader can be included into main.cpp with `ADD_SHADER` (be sure to also include your shader file in main.cpp).
 
