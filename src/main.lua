@@ -149,6 +149,8 @@ function main()
 		draw_circle(-100,100, 50, 10)
 		draw_quad(-100,-100, 100,100, 5, 5)
 		
+		draw_polyline({ -300,200, 0,300, 300,200 }, 5, false)
+		
 		b2World_Draw(world, debug_draw)
 		
 		if CF_DELTA_TIME > 0 then

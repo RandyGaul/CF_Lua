@@ -57,21 +57,16 @@ REF_FUNCTION(center_of_mass);
 REF_FUNCTION(calc_area);
 REF_FUNCTION(slice);
 
-int wrap_make_poly(lua_State* L)
+CF_Poly wrap_make_poly(v2* pts, int count)
 {
-	v2* pts;
-	int count = REF_LuaGetDynamicArray(L, lua_gettop(L), &pts);
-	lua_pop(L, 1);
 	count = hull(pts, count);
 	CF_Poly p;
 	p.count = count;
 	CF_MEMCPY(p.verts, pts, sizeof(v2) * count);
-	cf_free(pts);
 	norms(p.verts, p.norms, count);
-	REF_LuaSet(L, &p);
-	return 1;
+	return p;
 }
-REF_WRAP_MANUAL(wrap_make_poly);
+REF_FUNCTION(make_poly, {0,1});
 
 REF_FUNCTION(circle_to_circle);
 REF_FUNCTION(circle_to_aabb);
@@ -409,7 +404,7 @@ REF_FUNCTION_EX(draw_capsule_fill, cf_draw_capsule_fill);
 REF_FUNCTION(draw_tri);
 REF_FUNCTION(draw_tri_fill);
 REF_FUNCTION(draw_line);
-// draw_polyine - Manually bound below.
+REF_FUNCTION(draw_polyline, {0,1});
 REF_FUNCTION_EX(draw_bezier_line, cf_draw_bezier_line2);
 REF_FUNCTION(draw_arrow);
 
@@ -884,7 +879,6 @@ static void wrap_app_update_fn(void* udata)
 {
 	REF_CallLuaFunction(L, g_update_name_in_lua);
 }
-
 int wrap_app_update(lua_State* L)
 {
 	// Update with a callback.
@@ -918,23 +912,6 @@ REF_FUNCTION(version_string_linked);
 
 // -------------------------------------------------------------------------------------------------
 // Manually bind certain, difficult to automate, functions.
-
-// array of verts, thickness, loop
-int wrap_draw_polyline(lua_State* L)
-{
-	int base = lua_gettop(L);
-	v2* pts;
-	float thickness;
-	bool loop;
-	int count = REF_LuaGetDynamicArray(L, base-2, &pts);
-	REF_LuaGet(L, base-1, &thickness);
-	REF_LuaGet(L, base, &loop);
-	lua_pop(L, 3);
-	draw_polyline(pts, count, thickness, loop);
-	cf_free(pts);
-	return 0;
-}
-REF_WRAP_MANUAL(wrap_draw_polyline);
 
 CF_MemoryPool* g_sprite_pool;
 int wrap_make_demo_sprite(lua_State* L)

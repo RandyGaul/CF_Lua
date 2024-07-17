@@ -224,6 +224,7 @@ struct REF_Type
 	virtual String to_string(void* v) const = 0;
 	virtual void cast(void* to, void* from, const REF_Type* from_type) const = 0;
 	virtual void cleanup(void* v) const { }
+	virtual bool is_integral() const { return false; }
 	virtual bool is_pointer() const = 0;
 	virtual const REF_Type* dereference_type() const = 0;
 	virtual const REF_Type* address_type() const = 0;
@@ -338,6 +339,7 @@ template <> struct REF_TypeGetter<void*> { static const REF_Type* get() { return
 		virtual double to_number(void* v) const override { return (double)*(T*)v; } \
 		virtual String to_string(void* v) const override { return *(T*)v; } \
 		virtual void cast(void* to, void* from, const REF_Type* from_type) const override { *(T*)to = (T)from_type->to_number(from); } \
+		virtual bool is_integral() const override { return true; } \
 		virtual bool is_pointer() const override { return false; } \
 		virtual const REF_Type* dereference_type() const override { return NULL; } \
 		virtual const REF_Type* address_type() const override { return REF_GetType<T*>(); } \
@@ -659,7 +661,7 @@ struct REF_Variable
 		is_array = true;
 		array_count = count;
 	}
-	REF_Variable() {}
+	REF_Variable() { }
 	void* v = NULL;
 	const REF_Type* type = REF_GetType<void>();
 	bool is_array = false;
@@ -692,25 +694,42 @@ void REF_LuaSet(lua_State* L, T* t)
 	REF_GetType<T>()->lua_set(L, (void*)t);
 }
 
+struct REF_ArrayParameter
+{
+	int array_index;
+	int count_index;
+};
+
 // Stores arrays of type information to fully describe the signature of C-style function.
 struct REF_FunctionSignature
 {
 	template <typename R, typename... Params>
-	REF_FunctionSignature(R (*)(Params...))
+	REF_FunctionSignature(R (*)(Params...), std::initializer_list<REF_ArrayParameter> array_param_list)
 	{
 		if constexpr (sizeof...(Params) > 0) {
-			static const REF_Type* param_types[] = { REF_GetType<Params>()... };
-			param_count = sizeof...(Params);
-			this->params = param_types;
-		} else {
-			this->params = nullptr;
+			static const REF_Type* params[] = { REF_GetType<Params>()... };
+			static int param_array_count_index[sizeof...(Params)];
+			static bool param_is_array[sizeof...(Params)];
+			static bool param_is_array_count[sizeof...(Params)];
+			this->param_count = sizeof...(Params);
+			this->params = params;
+			for (int i = 0; i < array_param_list.size(); ++i) {
+				param_is_array[array_param_list.begin()[i].array_index] = true;
+				param_array_count_index[i] = array_param_list.begin()[i].count_index;
+				param_is_array_count[param_array_count_index[i]] = true;
+			}
+			this->param_is_array = param_is_array;
+			this->param_is_array_count = param_is_array_count;
+			this->param_array_count_index = param_array_count_index;
 		}
-		this->params = params;
 		return_type = REF_GetType<R>();
 	}
 
 	int param_count = 0;
 	const REF_Type** params = NULL;
+	const bool* param_is_array_count = NULL;
+	const bool* param_is_array = NULL;
+	const int* param_array_count_index = NULL;
 	const REF_Type* return_type = NULL;
 };
 
@@ -773,9 +792,9 @@ void REF_ApplyWrapper(void (*fn)(), REF_Variable ret, REF_Variable* params, int 
 struct REF_Function : public REF_List<REF_Function>
 {
 	template <typename T>
-	REF_Function(const char* name, T fn)
+	REF_Function(const char* name, T fn, std::initializer_list<REF_ArrayParameter> arrays)
 		: m_name(name)
-		, m_sig(fn)
+		, m_sig(fn, arrays)
 		, m_fn((void (*)())fn)
 		, m_fn_wrapper(REF_ApplyWrapper<T>)
 	{
@@ -811,22 +830,63 @@ int REF_LuaCFunction(lua_State* L)
 	ret.type = sig.return_type;
 	ret.v = alloca(sig.return_type->size());
 
-	// Allocate space on the C-stack for passing parameters to `fn`.
+	// Allocate stack space for each parameter.
 	int param_count = sig.param_count;
+	int param_count_without_array_counts = param_count;
 	REF_Variable* params = (REF_Variable*)alloca(sizeof(REF_Variable) * param_count);
+	CF_MEMSET(params, 0, sizeof(REF_Variable) * param_count);
 	for (int i = 0; i < param_count; ++i) {
 		params[i].type = sig.params[i];
 		params[i].v = alloca(params[i].type->size());
+		if (sig.param_is_array_count[i]) {
+			--param_count_without_array_counts;
+		} else if (sig.param_is_array[i]) {
+			params[i].is_array = true;
+		}
 	}
 
-	// Fetch each parameter from Lua.
-	if (lua_gettop(L) < param_count) {
+	if (lua_gettop(L) < param_count_without_array_counts) {
 		fprintf(stderr, "Mismatch of parameter count when calling %s.\n", fn->name());
 		exit(-1);
 	}
+
+	// Read in each parameter from Lua.
+	const int alloca_limit = 1024;
 	for (int i = 0, idx = 0; i < param_count; i++) {
-		params[i].type->lua_get(L, idx + 1, params[i].v);
-		idx += params[i].type->flattened_count();
+		REF_Variable* param = params + i;
+		int flattened_count = param->type->flattened_count();
+
+		// Don't fetch array counts from Lua, as they are instead set by querying
+		// the Lua table itself.
+		if (sig.param_is_array_count[i]) {
+			continue;
+		}
+
+		if (sig.param_is_array[i]) {
+			// Fetch the element count from the Lua table.
+			assert(lua_istable(L, idx+1));
+			const REF_Type* element_type = param->type->dereference_type();
+			flattened_count = element_type->flattened_count();
+			int count = (int)luaL_len(L, idx+1) / flattened_count;
+
+			// Set the element count in the correct parameter.
+			REF_Variable* vcount = params + sig.param_array_count_index[i];
+			vcount->type->cast(vcount->v, &count, REF_GetType<int>());
+			param->array_count = count;
+
+			// Copy count/data into the parameter.
+			int sz = element_type->size() * count;
+			void* data = sz > alloca_limit ? cf_alloc(sz) : alloca(sz);
+			REF_LuaGetArray(L, idx+1, element_type, data, count);
+			*(void**)param->v = data;
+
+			// Only skip over the array's table.
+			idx += 1;
+		} else {
+			// Read in the parameter from Lua.
+			param->type->lua_get(L, idx+1, param->v);
+			idx += flattened_count;
+		}
 	}
 
 	// Call the actual function.
@@ -835,6 +895,14 @@ int REF_LuaCFunction(lua_State* L)
 	// Cleanup any temporary storage (curse you, c-style strings).
 	for (int i = 0; i < param_count; ++i) {
 		params[i].type->cleanup(params[i].v);
+
+		// Free any dymaically allocated arrays.
+		if (params[i].is_array) {
+			int sz = params[i].type->size() * params[i].array_count;
+			if (sz > alloca_limit) {
+				cf_free(params[i].v);
+			}
+		}
 	}
 
 	// Pass return value back to Lua.
@@ -982,14 +1050,14 @@ int REF_CallLuaFunction(lua_State* L, const char* fn_name)
 // Expose a function to the reflection system.
 // It will be automatically bound to Lua.
 #undef REF_FUNCTION
-#define REF_FUNCTION(F) \
-	REF_Function g_##F##_REF_Function = REF_Function(#F, F)
+#define REF_FUNCTION(F, ...) \
+	REF_Function g_##F##_REF_Function(#F, F, { __VA_ARGS__ })
 
 // Expose a function to the reflection system.
 // It will be automatically bound to Lua with a custom name.
 #undef REF_FUNCTION_EX
-#define REF_FUNCTION_EX(name, F) \
-	REF_Function g_##name##_REF_Function = REF_Function(#name, F)
+#define REF_FUNCTION_EX(name, F, ...) \
+	REF_Function g_##name##_REF_Function(#name, F, { __VA_ARGS__ })
 
 // Automatically bind a constant to Lua.
 #undef REF_CONSTANT

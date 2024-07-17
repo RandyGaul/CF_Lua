@@ -817,24 +817,8 @@ REF_FUNCTION(b2WheelJoint_GetMotorTorque);
 
 bool wrap_b2IsValidRay(b2RayCastInput input) { return b2IsValidRay(&input); }
 REF_FUNCTION_EX(b2IsValidRay, wrap_b2IsValidRay);
-//b2Polygon wrap_b2MakePolygon(b2Hull hull, float radius)
-int wrap_b2MakePolygon(lua_State* L)
-{
-	int base = lua_gettop(L);
-	b2Vec2* pts;
-	float radius;
-	int count = REF_LuaGetDynamicArray(L, base-1, &pts);
-	REF_LuaGet(L, base, &radius);
-	b2Hull hull;
-	CF_MEMCPY(hull.points, pts, sizeof(b2Vec2) * count);
-	lua_pop(L, 2);
-	hull.count = count;
-	b2Polygon poly = b2MakePolygon(&hull, radius);
-	cf_free(pts);
-	REF_LuaSet(L, &poly);
-	return 1;
-}
-REF_WRAP_MANUAL(wrap_b2MakePolygon);
+b2Polygon wrap_b2MakePolygon(b2Vec2* pts, int count, float radius) { b2Hull hull = b2ComputeHull(pts, count); return b2MakePolygon(&hull, radius); }
+REF_FUNCTION_EX(b2MakePolygon, wrap_b2MakePolygon, {0,1});
 b2Polygon wrap_b2MakeOffsetPolygon(b2Hull hull, float radius, b2Transform transform) { return b2MakeOffsetPolygon(&hull, radius, transform); }
 REF_FUNCTION_EX(b2MakeOffsetPolygon, wrap_b2MakeOffsetPolygon);
 REF_FUNCTION(b2MakeSquare);
@@ -879,22 +863,9 @@ b2CastOutput wrap_b2ShapeCastSegment(b2ShapeCastInput input, b2Segment shape) { 
 REF_FUNCTION_EX(b2ShapeCastSegment, wrap_b2ShapeCastSegment);
 b2CastOutput wrap_b2ShapeCastPolygon(b2ShapeCastInput input, b2Polygon shape) { return b2ShapeCastPolygon(&input, &shape); }
 REF_FUNCTION_EX(b2ShapeCastPolygon, wrap_b2ShapeCastPolygon);
-
-int wrap_b2ComputeHull(lua_State* L)
-{
-	b2Vec2* pts;
-	int count = REF_LuaGetDynamicArray(L, lua_gettop(L), &pts);
-	lua_pop(L, 1);
-	b2Hull hull = b2ComputeHull(pts, count);
-	cf_free(pts);
-	REF_LuaSet(L, &hull);
-	return 1;
-}
-REF_WRAP_MANUAL(wrap_b2ComputeHull);
-
+REF_FUNCTION(b2ComputeHull, {0,1});
 bool wrap_b2ValidateHull(b2Hull hull) { return b2ValidateHull(&hull); }
 REF_FUNCTION_EX(b2ValidateHull, wrap_b2ValidateHull);
-
 b2CastOutput wrap_b2ShapeCast(b2ShapeCastPairInput input) { return b2ShapeCast(&input); }
 REF_FUNCTION_EX(b2ShapeCast, wrap_b2ShapeCast);
 b2DistanceProxy wrap_b2MakeProxy(b2Hull hull, float radius) { return b2MakeProxy(hull.points, hull.count, radius); }

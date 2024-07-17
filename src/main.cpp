@@ -41,7 +41,7 @@ REF_WRAP_MANUAL(wrap_make_shader);
 
 int main(int argc, char* argv[])
 {
-	make_app("CF in Lua", 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+	make_app("CF in Lua", 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_NO_AUDIO, argv[0]);
 	::L = luaL_newstate();
 	luaL_openlibs(L);
 	REF_BindLua(L);
