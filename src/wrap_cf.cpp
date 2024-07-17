@@ -17,11 +17,11 @@ CF_MESSAGE_BOX_TYPE_DEFS
 REF_FUNCTION(is_error);
 REF_FUNCTION(message_box);
 
-REF_PTR_TYPE(ImGuiContext);
-REF_PTR_TYPE(CF_Sprite);
-REF_PTR_TYPE(CF_File);
-REF_PTR_TYPE(CF_Joypad);
-REF_PTR_TYPE(CF_Haptic);
+REF_OPAQUE_PTR_TYPE(ImGuiContext);
+REF_OPAQUE_PTR_TYPE(CF_Sprite);
+REF_OPAQUE_PTR_TYPE(CF_File);
+REF_OPAQUE_PTR_TYPE(CF_Joypad);
+REF_OPAQUE_PTR_TYPE(CF_Haptic);
 
 // -------------------------------------------------------------------------------------------------
 // Math
@@ -56,18 +56,7 @@ REF_FUNCTION(ray_to_halfspace);
 REF_FUNCTION(center_of_mass);
 REF_FUNCTION(calc_area);
 REF_FUNCTION(slice);
-
-CF_Poly wrap_make_poly(v2* pts, int count)
-{
-	count = hull(pts, count);
-	CF_Poly p;
-	p.count = count;
-	CF_MEMCPY(p.verts, pts, sizeof(v2) * count);
-	norms(p.verts, p.norms, count);
-	return p;
-}
 REF_FUNCTION(make_poly, {0,1});
-
 REF_FUNCTION(circle_to_circle);
 REF_FUNCTION(circle_to_aabb);
 REF_FUNCTION(circle_to_capsule);

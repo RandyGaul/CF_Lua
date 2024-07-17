@@ -52,7 +52,7 @@ end
 
 function dbg_draw_segment(x0, y0, x1, y1, cr, cg, cb, ca)
 	draw_push_color(cr, cg, cb, ca)
-	draw_line(x, y, dbg_thickness)
+	draw_line(x0, y0, x1, y1, dbg_thickness)
 	draw_pop_color()
 end
 
@@ -110,6 +110,11 @@ for i=1,100 do
 	b2CreateBox(0, 20+i*10.5, 10, 10, b2_dynamicBody)
 end
 
+def = b2DefaultChainDef()
+def.points = { -25,-25, 50,-50, 100,-50, 150,-25, 200,0, 250,50 }
+def.isLoop = true
+b2CreateChain(b2CreateBody(world, b2DefaultBodyDef()), def)
+
 function on_update()
 	REF_SyncGlobals()
 		
@@ -149,14 +154,14 @@ function main()
 		draw_circle(-100,100, 50, 10)
 		draw_quad(-100,-100, 100,100, 5, 5)
 		
-		draw_polyline({ -300,200, 0,300, 300,200 }, 5, false)
+		draw_polyline({ -300,200, 0,250, 300,200 }, 5, false)
 		
 		b2World_Draw(world, debug_draw)
 		
 		if CF_DELTA_TIME > 0 then
 			fps = lerp(1.0 / 10.0, fps, 1.0 / CF_DELTA_TIME)
 		end
-		draw_text(tostring(fps), -200,-100,-1)
+		draw_text(tostring(fps), -300,-200,-1)
 		
 		app_draw_onto_screen(true)
 	end

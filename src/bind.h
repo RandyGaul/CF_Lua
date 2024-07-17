@@ -1,5 +1,6 @@
 // Binds most C code to Lua using template metaprogramming techniques. The techniques
 // were learned from John Edwards - https://www.youtube.com/watch?v=hWDZ3Yy-NMA
+// 
 // This technique heavily reduces boilerplate, and scales up very well, typically only costing
 // one-line per type/function you wish to bind.
 // 
@@ -30,75 +31,7 @@ extern "C" {
 // 
 // Happy Lua'ing!
 
-// Call this once from main to bind everything.
-void REF_BindLua(lua_State* L);
-
-// Syncs all global variables to Lua.
-// Callable from Lua.
-int REF_SyncGlobals(lua_State* L);
-
-// You can use this on handles/ids 32/64-bits in size.
-#define REF_HANDLE_TYPE(H)
-
-// Expose a function to the reflection system. It will be bound to Lua with a matching name.
-#define REF_FUNCTION(F)
-
-// Expose a function to the reflection system. It will be bound to Lua with a custom name.
-#define REF_FUNCTION_EX(name, F)
-
-// Expose a constant to the reflection system. This is for defines, literals, enums, etc. The constant
-// will be cast to 64-bit `uintptr_t`.
-#define REF_CONSTANT(C)
-
-// Expose a struct to the reflection system.
-// Use it alongside `REF_MEMBER`. Example:
-// 
-//     REF_STRUCT(MyStruct
-//          REF_MEMBER(x),
-//          REF_MEMBER(y),
-//          REF_MEMBER(data),
-//     );
-// 
-// Just be sure that each member type itself has been exposed to the reflection system with a
-// different call to `REF_STRUCT`. You may also 
-#define REF_STRUCT(T, ...)
-
-// Expose a member of a struct to the reflection system.
-#define REF_MEMBER(T)
-
-// Expose a member array of a struct to the reflection system. Does not support dynamic arrays.
-#define REF_MEMBER_ARRAY(T, count)
-
-// Expose a global variable to the reflection system. It will be bound to Lua with a matching name.
-#define REF_GLOBAL(G)
-
-// Wraps a manually written function and removes prefix "wrap_" from the name bound to Lua.
-// This means functions with the signature: int func(lua_State* L)
-#define REF_WRAP_MANUAL(F)
-
-// In some more uncommon cases you may need to manually define reflection info for your type
-// in order to customize its behavior (mainly to customize `lua_set` and `lua_get`). You can find
-// examples of this throughout the header. One good example is to manually flatten vectors. In Lua
-// it's not a good idea to store named keys for vector components due to perf costs. Instead, an
-// indexed table is superior. We can define reflection information for vectors that automatically
-// flattens the vectors for us like so:
-
-// struct v2_Type : public REF_Type
-// {
-//     virtual const char* name() const { return "v2"; }
-//     virtual int size() const { return sizeof(v2); }
-//     virtual double to_number(void* v) const { return 0; }
-//     virtual String to_string(void* v) const { return String(); }
-// 
-//     virtual void cast(void* to, void* from, const REF_Type* from_type) const { assert(from_type == REF_GetType<v2>()); *(v2*)to = *(v2*)from; }
-//     virtual void cleanup(void* v) const { }
-//     virtual void lua_set(lua_State* L, void* v) const { lua_pushnumber(L, ((v2*)v)->x); lua_pushnumber(L, ((v2*)v)->y); }
-//     virtual void lua_get(lua_State* L, int index, void* v) const { ((v2*)v)->x = (float)lua_tonumber(L, index); ((v2*)v)->y = (float)lua_tonumber(L, index + 1); }
-//     virtual int flattened_count() const { return 2; }
-// } g_v2_Type;
-// template <> struct REF_TypeGetter<v2> { static const REF_Type* get() { return &g_v2_Type; } };
-
-// Overall your binding .cpp file should look something like this:
+// Overall your binding .cpp file should look something like this (all in one .cpp file/translation unit):
 // 
 // #include <bind.h>
 // 
@@ -131,12 +64,98 @@ int REF_SyncGlobals(lua_State* L);
 //     return 0;
 // }
 
+// Call this once from main to bind everything.
+void REF_BindLua(lua_State* L);
+
+// Syncs all global variables to Lua.
+// Callable from Lua Recommended to call this once per frame after gathering application inputs.
+int REF_SyncGlobals(lua_State* L);
+
+// You can use this on handles/ids 32/64-bits in size.
+#define REF_HANDLE_TYPE(H)
+
+// Expose a function to the reflection system. It will be bound to Lua with a matching name.
+// Arrays must be explicitly marked by parameter indices, starting at index 0. Example:
+// 
+//     ConvexHull make_hull(v2* pts, int count);
+//     REF_FUNCTION(make_hull, {0,1});
+// 
+// The brackets {0,1} specify an array/count parameter pair. You may set as many of these
+// array pairs as you like in a comma separated list.
+#define REF_FUNCTION(F)
+
+// Expose a function to the reflection system. It will be bound to Lua with a custom name.
+#define REF_FUNCTION_EX(name, F)
+
+// Wraps a manually written function and removes prefix "wrap_" from the name bound to Lua.
+// This means functions with the signature: int func(lua_State* L)
+#define REF_WRAP_MANUAL(F)
+
+// Expose a constant to the reflection system. This is for defines, string literals, enums, etc.
+// The constant will be cast to 64-bit `uintptr_t`.
+#define REF_CONSTANT(C)
+
+// Expose a struct to the reflection system.
+// Use it alongside `REF_MEMBER`. Example:
+// 
+//     REF_STRUCT(MyStruct
+//          REF_MEMBER(x),
+//          REF_MEMBER(y),
+//          REF_MEMBER(data),
+//     );
+// 
+// Just be sure that each member type itself has been exposed to the reflection system with a
+// different call to `REF_STRUCT`. You may also reference array members with REF_MEMBER_ARRAY.
+#define REF_STRUCT(T, ...)
+
+// Expose a member of a struct to the reflection system. Example:
+// 
+//     REF_STRUCT(MyStruct
+//          REF_MEMBER(x),
+//          REF_MEMBER(y),
+//          REF_MEMBER(data),
+//     );
+#define REF_MEMBER(M)
+
+// Expose a member array of a struct to the reflection system. the count member does *not*
+// need to bound explicitly with another REF_MEMBER. Example:
+// 
+//     struct ConvexHull
+//     {
+//         v2* pts;
+//         int count;
+//     };
+//     
+//     REF_STRUCT(ConvexHull,
+//         REF_MEMBER_ARRAY(pts, count)
+//     );
+// 
+// This will also work for inline arrays.
+// 
+//     struct ConvexHull
+//     {
+//         int count;
+//         v2 pts[8];
+//     };
+//     
+//     REF_STRUCT(ConvexHull,
+//         REF_MEMBER_ARRAY(pts, count)
+//     );
+// 
+// The order the array pointer and count members does not matter within the struct layout.
+#define REF_MEMBER_ARRAY(T, count)
+
+// Expose a global variable to the reflection system. It will be bound to Lua with a matching name.
+// This will get sync'd to Lua each time REF_SyncGlobals is called. Note that REF_SyncGlobals is also
+// callable from Lua.
+#define REF_GLOBAL(G)
+
 // Call a function in Lua.
 // The return values *must* be in an initializer list. Be sure they are proper l-values (no literals), because
 // we must write to the return values.
 // Returns the number of return values from Lua, and zero's out any remaining return value's you passed in.
 // Extra parameters in Lua will remain nil as usual.
-// You need to call `sfree` on any return'd strings, and/or call REF_GetType<T>()->cleanup(ptr) for all return values that allocate memory.
+// You need to call `sfree` on any return'd strings, and/or call REF_GetType<T>()->cleanup(ptr) for all return values that allocated memory.
 // 
 //     template <typename... Params>
 //     int REF_CallLuaFunction(lua_State* L, const char* fn_name, std::initializer_list<REF_Variable> return_values, Params... params)
@@ -157,7 +176,56 @@ int REF_SyncGlobals(lua_State* L);
 //     "hello"    0    -10
 //     -5
 //     200
+
+// You may flatten structs down for structs that contain all-floats or all-ints. This is
+// a nice thing to do for math types. This will send each member of the struct
+// by value rather than as a key/value pair.
+#define REF_FLAT_FLOATS(T)
+#define REF_FLAT_INTS(T)
+
+// Passing Lua callbacks into C functions is a little tricky, but not too difficult.
+// Bind a function to Lua to collect the callback name from Lua as a string. Store this
+// somewhere, for example as a userdata pointer. Pass a wrapper callback to your C code.
+// The wrapper callback simply fetches the Lua string name, and then calls the Lua
+// callback. It's highly recommended to use REF_CallLuaFunction to make this process simple.
+// If done correctly, the C callback wrapper should look something like this:
 // 
+// void wrap_Callback(int a, float y, void* userdata)
+// {
+//     lua_State* L = ((MyLuaContext*)userdata)->L;
+//     const char* lua_fn_name = ((MyLuaContext*)userdata)->lu_fn_name;
+//     int error = 0;
+//     v2 pts* = NULL;
+//     int count = 0;
+//     
+//     // a, y are function parameters sent to lua_fn_name.
+//     // The return values are error, and an array comprised of {pts, count}.
+//     REF_CallLuaFunction(L, lua_fn_name, { error, REF_Array(pts, count) }, a, y);
+//     
+//     // Cleanup any arrays/strings that Lua sent back as return values.
+//     free(pts);
+// }
+
+// Notes on arrays.
+// 
+// In Lua arrays are treated as indexed tables. Whenever we send an array from
+// Lua to C, as a function parameter, the count of the array is *not* sent explicitly
+// on the Lua side. It will get automatically injected into the correct C parameter.
+// This works since we explicitly state arrays when binding functions via REF_FUNCTION.
+// Example:
+// 
+//    ConvexHull make_hull(v2* pts, int count);
+// 
+// We can call this in Lua like so:
+// 
+//     hull = make_hul(vertices)
+//
+// This will work so long as the array parameter pair is marked when binding, like so:
+// 
+//     REF_FUNCTION(make_hull, {0,1});
+// 
+// Whenever arrays are sent as return values back from Lua we must clean them up
+// on the C-side. See `REF_CallLuaFunction` for details. This includes strings.
 
 // -------------------------------------------------------------------------------------------------
 // REF - Reflection implementation.
@@ -241,7 +309,8 @@ struct REF_TypeGetter
 {
 	static const REF_Type* get()
 	{
-		//static_assert(sizeof(T) == -1, "Type not registered with reflection.");
+		static_assert(sizeof(T) == -1, "Type not registered with reflection (see type below, in the next error).");
+		T = T;
 		return NULL;
 	}
 };
@@ -293,8 +362,7 @@ struct remove_cv<T*>
 template<typename T>
 const REF_Type* REF_GetType()
 {
-	using BaseType = typename remove_array_extents<typename remove_cv<T>::type>::type;
-	return REF_TypeGetter<BaseType>::get();
+	return REF_TypeGetter<typename remove_array_extents<typename remove_cv<T>::type>::type>::get();
 }
 
 // No-ops representing void, mainly for functions that return nothing.
@@ -421,6 +489,23 @@ REF_PTR_PTR_TYPE(uint32_t);
 REF_PTR_PTR_TYPE(uint64_t);
 REF_PTR_PTR_TYPE(int64_t);
 
+// Expose an opaque pointer type to the reflection system.
+#define REF_OPAQUE_PTR_TYPE(T) \
+	struct T##_Ptr_Type : public REF_Type \
+	{ \
+		virtual const char* name() const override { return #T "*"; } \
+		virtual int size() const { return sizeof(T*); } \
+		virtual double to_number(void* v) const override { return 0; } \
+		virtual String to_string(void* v) const override { return *(T**)v; } \
+		virtual void cast(void* to, void* from, const REF_Type* from_type) const override { assert(this == from_type); *(T**)to = *(T**)from; } \
+		virtual bool is_pointer() const override { return true; } \
+		virtual const REF_Type* dereference_type() const override { return NULL; } \
+		virtual const REF_Type* address_type() const override { return NULL; } \
+		virtual void lua_set(lua_State* L, void* v) const override { lua_pushlightuserdata(L, *(T**)v); } \
+		virtual void lua_get(lua_State* L, int index, void* v) const override { *(T**)v = (T*)lua_touserdata(L, index); } \
+	} g_##T##_Ptr_Type; \
+	template <> struct REF_TypeGetter<T*> { static const REF_Type* get() { return &g_##T##_Ptr_Type; } }
+
 struct bool_Type : public REF_Type
 {
 	virtual const char* name() const { return "bool"; }
@@ -529,6 +614,7 @@ struct REF_Member
 	const char* array_count_name = NULL;
 	size_t array_count_offset = 0;
 	const REF_Type* array_count_type = NULL;
+	bool is_array_external = false;
 
 	bool is_array() const { return array_count_name == NULL ? false : true; }
 };
@@ -551,7 +637,14 @@ struct REF_Struct : public REF_Type
 		const REF_Member* mptr = members();
 		for (int i = 0; i < count; ++i) {
 			const REF_Member* m = mptr + i;
-			m->type->cleanup((char*)v + m->offset);
+			void* mv = (void*)((uintptr_t)v + m->offset);
+			if (m->is_array() && m->is_array_external) {
+				// Cleanup any dynamically allocated external arrays.
+				void* data = *(void**)mv;
+				cf_free(data);
+			} else {
+				m->type->cleanup(mv);
+			}
 		}
 	}
 
@@ -559,6 +652,7 @@ struct REF_Struct : public REF_Type
 
 	virtual void lua_set(lua_State* L, void* v) const override
 	{
+		const char* struct_name = name();
 		int count = member_count();
 		const REF_Member* mptr = members();
 		lua_newtable(L);
@@ -573,7 +667,11 @@ struct REF_Struct : public REF_Type
 				lua_newtable(L);
 				int n = 0;
 				REF_GetType<int>()->cast(&n, (void*)((uintptr_t)v + m->array_count_offset), m->array_count_type);
-				REF_LuaSetArray(L, mv, m->type, n);
+				void* data = mv;
+				if (m->is_array_external) {
+					void* data = *(void**)mv;
+				}
+				REF_LuaSetArray(L, data, m->type, n);
 			} else {
 				// Non-array member.
 				int n = m->type->flattened_count();
@@ -617,9 +715,20 @@ struct REF_Struct : public REF_Type
 			if (m->is_array()) {
 				// Read in an array.
 				assert(lua_istable(L, -1));
-				int n = (int)luaL_len(L, -1) / m->type->flattened_count();
-				m->array_count_type->cast((void*)((uintptr_t)v + m->array_count_offset), &n, REF_GetType<int>());
-				REF_LuaGetArray(L, lua_gettop(L), m->type, mv, n);
+				if (m->is_array_external) {
+					// Dynamically allocate an external array, this is cleaned up in cleanup().
+					const REF_Type* element_type = m->type->dereference_type();
+					int n = (int)luaL_len(L, -1) / element_type->flattened_count();
+					m->array_count_type->cast((void*)((uintptr_t)v + m->array_count_offset), &n, REF_GetType<int>());
+					void* data = cf_alloc(n * element_type->size());
+					*(void**)mv = data;
+					REF_LuaGetArray(L, lua_gettop(L), element_type, data, n);
+				} else {
+					// Read the array straight into the struct instance.
+					int n = (int)luaL_len(L, -1) / m->type->flattened_count();
+					m->array_count_type->cast((void*)((uintptr_t)v + m->array_count_offset), &n, REF_GetType<int>());
+					REF_LuaGetArray(L, lua_gettop(L), m->type, mv, n);
+				}
 			} else {
 				// Non-array member.
 				int n = m->type->flattened_count();
@@ -694,6 +803,7 @@ void REF_LuaSet(lua_State* L, T* t)
 	REF_GetType<T>()->lua_set(L, (void*)t);
 }
 
+// Captures array param+count indices for REF_FunctionSignature.
 struct REF_ArrayParameter
 {
 	int array_index;
@@ -846,7 +956,7 @@ int REF_LuaCFunction(lua_State* L)
 	}
 
 	if (lua_gettop(L) < param_count_without_array_counts) {
-		fprintf(stderr, "Mismatch of parameter count when calling %s.\n", fn->name());
+		fprintf(stderr, "Mismatch of parameter count (%d) when calling %s (expected %d).\n", lua_gettop(L), fn->name(), param_count_without_array_counts);
 		exit(-1);
 	}
 
@@ -1034,19 +1144,6 @@ int REF_CallLuaFunction(lua_State* L, const char* fn_name)
 		} \
 	}
 
-// Treat handles as 32-bit int within the reflection system.
-#undef REF_HANDLE32_TYPE
-#define REF_HANDLE32_TYPE(H) \
-	template <> \
-	struct REF_TypeGetter<H> \
-	{ \
-		static const REF_Type* get() \
-		{ \
-			static_assert(sizeof(T) == sizeof(int), "Invalid handle size."); \
-			return &g_int_ptr_Type; \
-		} \
-	}
-
 // Expose a function to the reflection system.
 // It will be automatically bound to Lua.
 #undef REF_FUNCTION
@@ -1134,14 +1231,16 @@ int REF_CallLuaFunction(lua_State* L, const char* fn_name)
 
 // Expose a member of a struct to the reflection system.
 #undef REF_MEMBER
-#define REF_MEMBER(m) { #m, CF_OFFSET_OF(Type, m), REF_GetType<decltype(((Type*)0)->m)>(), NULL, 0, NULL }
+#define REF_MEMBER(m) { #m, CF_OFFSET_OF(Type, m), REF_GetType<decltype(((Type*)0)->m)>(), NULL, 0, NULL, false }
 
-// Expose an array to the reflection system (not dynamically allocated).
+// Expose an array member of a struct to the reflection system.
 #undef REF_MEMBER_ARRAY
 #define REF_MEMBER_ARRAY(m, count) \
 	{ #m, CF_OFFSET_OF(Type, m), REF_GetType<decltype(((Type*)0)->m)>(), \
-	  #count, CF_OFFSET_OF(Type, count), REF_GetType<decltype(((Type*)0)->count)>() }
+	  #count, CF_OFFSET_OF(Type, count), REF_GetType<decltype(((Type*)0)->count)>(), !std::is_array<decltype(((Type*)0)->m)>::value }
 
+// Represents a global variable, to be automatically bound to Lua, and sync'd
+// whenever REF_SyncGlobals is called.
 struct REF_Global : REF_List<REF_Global>
 {
 	template <typename T>
@@ -1170,12 +1269,14 @@ int REF_SyncGlobals(lua_State* L)
 	return 0;
 }
 
-// Bind a manually wrapped Lua function.
+// Bind a manually wrapped Lua function. This must be a function like so: int func(lua_State* L)
 // The "wrap_" prefix is automatically removed from the bound name.
 #undef REF_WRAP_MANUAL
 #define REF_WRAP_MANUAL(F) \
 	REF_WrapBinder g_##F##_WrapManual(#F, F)
 
+// Facilitates automatic binding of manually wrapped functions.
+// Strips off "wrap_" prefix for the name of the function in Lua.
 struct REF_WrapBinder : REF_List<REF_WrapBinder>
 {
 	REF_WrapBinder(const char* name, int (*fn)(lua_State*))

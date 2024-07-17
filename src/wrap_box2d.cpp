@@ -109,7 +109,14 @@ REF_STRUCT(b2BodyDef,
 	REF_MEMBER(internalValue),
 );
 
-// @TODO b2ChainDef
+REF_STRUCT(b2ChainDef,
+	REF_MEMBER_ARRAY(points, count),
+	REF_MEMBER(friction),
+	REF_MEMBER(restitution),
+	REF_MEMBER(filter),
+	REF_MEMBER(isLoop),
+	REF_MEMBER(internalValue),
+);
 
 REF_STRUCT(b2MassData,
 	REF_MEMBER(mass),
@@ -384,58 +391,31 @@ REF_FUNCTION(b2DestroyWorld);
 REF_FUNCTION(b2World_IsValid);
 REF_FUNCTION(b2World_Step);
 
-// @TODO Use REF_Array instead.
+REF_STRUCT(b2SensorEvents,
+	REF_MEMBER_ARRAY(beginEvents, beginCount),
+	REF_MEMBER_ARRAY(endEvents, endCount),
+);
 int wrap_b2World_GetSensorEvents(lua_State* L)
 {
 	b2WorldId worldId = REF_Cast<b2WorldId>(lua_tointeger(L, -1));
 	lua_pop(L, 1);
 	b2SensorEvents events = b2World_GetSensorEvents(worldId);
-	lua_newtable(L);
-	lua_pushstring(L, "beginEvents");
-	lua_newtable(L);
-	for (int i = 0; i < events.beginCount; ++i) {
-		REF_LuaSet(L, events.beginEvents + i);
-		lua_rawseti(L, -2, i + 1);
-	}
-	lua_settable(L, -3);
-	lua_pushstring(L, "endEvents");
-	lua_newtable(L);
-	for (int i = 0; i < events.endCount; ++i) {
-		REF_LuaSet(L, events.endEvents + i);
-		lua_rawseti(L, -2, i + 1);
-	}
-	lua_settable(L, -3);
+	REF_LuaSet(L, &events);
 	return 1;
 }
 REF_WRAP_MANUAL(wrap_b2World_GetSensorEvents);
 
+REF_STRUCT(b2ContactEvents,
+	REF_MEMBER_ARRAY(beginEvents, beginCount),
+	REF_MEMBER_ARRAY(endEvents, endCount),
+	REF_MEMBER_ARRAY(hitEvents, hitCount),
+);
 int wrap_b2World_GetContactEvents(lua_State* L)
 {
 	b2WorldId worldId = REF_Cast<b2WorldId>(lua_tointeger(L, -1));
 	lua_pop(L, 1);
 	b2ContactEvents events = b2World_GetContactEvents(worldId);
-	lua_newtable(L);
-	lua_pushstring(L, "beginEvents");
-	lua_newtable(L);
-	for (int i = 0; i < events.beginCount; ++i) {
-		REF_LuaSet(L, events.beginEvents + i);
-		lua_rawseti(L, -2, i + 1);
-	}
-	lua_settable(L, -3);
-	lua_pushstring(L, "endEvents");
-	lua_newtable(L);
-	for (int i = 0; i < events.endCount; ++i) {
-		REF_LuaSet(L, events.endEvents + i);
-		lua_rawseti(L, -2, i + 1);
-	}
-	lua_settable(L, -3);
-	lua_pushstring(L, "hitEvents");
-	lua_newtable(L);
-	for (int i = 0; i < events.hitCount; ++i) {
-		REF_LuaSet(L, events.hitEvents + i);
-		lua_rawseti(L, -2, i + 1);
-	}
-	lua_settable(L, -3);
+	REF_LuaSet(L, &events);
 	return 1;
 }
 REF_WRAP_MANUAL(wrap_b2World_GetContactEvents);
@@ -672,7 +652,13 @@ REF_FUNCTION(b2Shape_GetContactCapacity);
 REF_FUNCTION(b2Shape_GetAABB);
 REF_FUNCTION(b2Shape_GetClosestPoint);
 
-// @TODO chain functions
+REF_FUNCTION(b2DefaultChainDef);
+b2ChainId wrap_b2CreateChain(b2BodyId bodyId, b2ChainDef def) { return b2CreateChain(bodyId, &def); }
+REF_FUNCTION_EX(b2CreateChain, wrap_b2CreateChain);
+REF_FUNCTION(b2DestroyChain);
+REF_FUNCTION(b2Chain_SetFriction);
+REF_FUNCTION(b2Chain_SetRestitution);
+REF_FUNCTION(b2Chain_IsValid);
 
 REF_FUNCTION(b2DestroyJoint);
 REF_FUNCTION(b2Joint_IsValid);
