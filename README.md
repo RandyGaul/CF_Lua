@@ -1,4 +1,4 @@
-# Lua bindings notes for CF and Box2D
+# Lua Bindings for CF and Box2D
 
 Arrays - When calling a C function and passing arrays over to C do *not* send in the length of the array. The array
 length gets automatically handled by the binding system.
@@ -22,7 +22,7 @@ Otherwise there aren't too many quirks, and 99% of functions match 1:1 with the 
 You have CF and Box2D bindings as examples to follow if you ever want to add new stuff to Lua from C. This includes any other C library. It's possible to bind C++ libraries as well, but, they need to either written in C-style or wrapped in a C API. C++ APIs themselves are notoriously overcomplicated and don't map well to other languages. For this reason I recommend to stick just to APIs that expose simple structs/pointers/handles. Bind.h has a ton of notes at the top of the header about how to bind and expose new things to Lua.
 
 
-~ Building ~
+# Building
 
 I'm using latest version of VS2022. Unfortunately older versions won't work because Box2D authored their C API with the absolute newest features from C, meaning older versions of MSVC just won't compile. This is the _Atomic keyword. Just download/update to the latest version of MSVC and it will compile.
 
