@@ -36,6 +36,26 @@ int wrap_make_shader(lua_State* L)
 }
 REF_WRAP_MANUAL(wrap_make_shader);
 
+void dump_lua_api()
+{
+	printf("Constants:\n");
+	for (const REF_Constant* c = REF_Constant::head(); c; c = c->next) {
+		printf("\t%s\n", c->name);
+	}
+	printf("\nGlobal Variables:\n");
+	for (const REF_Global* g = REF_Global::head(); g; g = g->next) {
+		printf("\t%s\n", g->name);
+	}
+	printf("\nFunctions:\n");
+	for (const REF_Function* fn = REF_Function::head(); fn; fn = fn->next) {
+		printf("\t%s\n", fn->name());
+	}
+	for (const REF_WrapBinder* w = REF_WrapBinder::head(); w; w = w->next) {
+		printf("\t%s\n", w->name);
+	}
+}
+REF_FUNCTION(dump_lua_api);
+
 // -------------------------------------------------------------------------------------------------
 // Main
 

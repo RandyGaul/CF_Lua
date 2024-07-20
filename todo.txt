@@ -1,0 +1,3 @@
+Select monitor to spawn upon
+Query moniter size
+Error reporting missing line numbers sometimes

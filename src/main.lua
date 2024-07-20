@@ -1,3 +1,5 @@
+dump_lua_api()
+
 def = b2DefaultWorldDef()
 world = b2CreateWorld(def)
 
