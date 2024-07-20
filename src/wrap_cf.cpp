@@ -313,6 +313,14 @@ REF_FUNCTION(music_crossfade);
 REF_FUNCTION(music_set_sample_index);
 REF_FUNCTION(music_get_sample_index);
 
+REF_STRUCT(CF_SoundParams,
+	REF_MEMBER(paused),
+	REF_MEMBER(looped),
+	REF_MEMBER(volume),
+	REF_MEMBER(pan),
+	REF_MEMBER(pitch),
+);
+
 REF_STRUCT(SoundParams,
 	REF_MEMBER(paused),
 	REF_MEMBER(looped),
@@ -851,15 +859,15 @@ REF_FUNCTION_EX(noise4, cf_noise4);
 // -------------------------------------------------------------------------------------------------
 // Rnd
 
-int wrap_seed_rnd(lua_State* L)
+int wrap_rnd_seed(lua_State* L)
 {
-	uint64_t seed = lua_tonumber(L, -1);
+	uint64_t seed = lua_tointeger(L, -1);
 	lua_pop(L, 1);
 	CF_RndState* s = (CF_RndState*)lua_newuserdata(L, sizeof(CF_RndState));
 	*s = rnd_seed(seed);
 	return 1;
 }
-REF_WRAP_MANUAL(wrap_seed_rnd);
+REF_WRAP_MANUAL(wrap_rnd_seed);
 
 int wrap_rnd(lua_State* L)
 {
