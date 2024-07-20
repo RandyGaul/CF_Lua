@@ -313,14 +313,6 @@ REF_FUNCTION(music_crossfade);
 REF_FUNCTION(music_set_sample_index);
 REF_FUNCTION(music_get_sample_index);
 
-REF_STRUCT(CF_SoundParams,
-	REF_MEMBER(paused),
-	REF_MEMBER(looped),
-	REF_MEMBER(volume),
-	REF_MEMBER(pan),
-	REF_MEMBER(pitch),
-);
-
 REF_STRUCT(SoundParams,
 	REF_MEMBER(paused),
 	REF_MEMBER(looped),
@@ -331,7 +323,8 @@ REF_STRUCT(SoundParams,
 
 REF_HANDLE_TYPE(Sound);
 
-REF_FUNCTION(cf_sound_params_defaults);
+SoundParams sound_params_defaults() { return SoundParams(); }
+REF_FUNCTION(sound_params_defaults);
 REF_FUNCTION(play_sound);
 REF_FUNCTION(sound_is_active);
 REF_FUNCTION(sound_get_is_paused);
