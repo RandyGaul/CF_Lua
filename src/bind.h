@@ -224,6 +224,15 @@ int REF_SyncGlobals(lua_State* L);
 // 
 //     REF_FUNCTION(make_hull, {0,1});
 // 
+// You can also deal with multiple arrays in any order.
+// 
+//     void example(int data0*, int count0, const char* name, int count1, float f, int* data1);
+//     REF_FUNCTION(example, {0,1}, {5,3});
+// 
+// Which would be called in Lua like so:
+// 
+//     ex = example(data0, name, f, data1)
+// 
 // Whenever arrays are sent as return values back from Lua we must clean them up
 // on the C-side. See `REF_CallLuaFunction` for details. This includes strings.
 

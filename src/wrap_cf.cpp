@@ -323,6 +323,7 @@ REF_STRUCT(SoundParams,
 
 REF_HANDLE_TYPE(Sound);
 
+REF_FUNCTION(cf_sound_params_defaults);
 REF_FUNCTION(play_sound);
 REF_FUNCTION(sound_is_active);
 REF_FUNCTION(sound_get_is_paused);
@@ -846,6 +847,59 @@ REF_FUNCTION_EX(noise3, cf_noise3);
 REF_FUNCTION_EX(noise4, cf_noise4);
 
 // @TODO Image helpers.
+
+// -------------------------------------------------------------------------------------------------
+// Rnd
+
+int wrap_seed_rnd(lua_State* L)
+{
+	uint64_t seed = lua_tonumber(L, -1);
+	lua_pop(L, 1);
+	CF_RndState* s = (CF_RndState*)lua_newuserdata(L, sizeof(CF_RndState));
+	*s = rnd_seed(seed);
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_seed_rnd);
+
+int wrap_rnd(lua_State* L)
+{
+	CF_RndState* s = (CF_RndState*)lua_touserdata(L, -1);
+	lua_pop(L, 1);
+	lua_pushinteger(L, rnd(s));
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_rnd);
+
+int wrap_rnd_float(lua_State* L)
+{
+	CF_RndState* s = (CF_RndState*)lua_touserdata(L, -1);
+	lua_pop(L, 1);
+	lua_pushnumber(L, rnd_double(s));
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_rnd_float);
+
+int wrap_rnd_range(lua_State* L)
+{
+	CF_RndState* s = (CF_RndState*)lua_touserdata(L, -3);
+	uint64_t lo = lua_tointeger(L, -2);
+	uint64_t hi = lua_tointeger(L, -1);
+	lua_pop(L, 3);
+	lua_pushinteger(L, cf_rnd_range_uint64(s, lo, hi));
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_rnd_range);
+
+int wrap_rnd_range_float(lua_State* L)
+{
+	CF_RndState* s = (CF_RndState*)lua_touserdata(L, -3);
+	double lo = lua_tonumber(L, -2);
+	double hi = lua_tonumber(L, -1);
+	lua_pop(L, 3);
+	lua_pushnumber(L, cf_rnd_range_double(s, lo, hi));
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_rnd_range_float);
 
 // -------------------------------------------------------------------------------------------------
 // Time

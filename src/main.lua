@@ -149,8 +149,10 @@ function main()
 		draw_sprite(spr)
 		draw_pop_layer()
 		
-		local text = "<blue>Hello</blue>"
-		draw_text(text, 150,0, #text)
+		if key_down(KEY_K) then
+			local text = "<blue>Hello</blue>"
+			draw_text(text, 150,0, #text)
+		end
 		draw_circle(-100,100, 50, 10)
 		draw_quad(-100,-100, 100,100, 5, 5)
 		
