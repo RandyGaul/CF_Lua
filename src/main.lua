@@ -122,7 +122,7 @@ function on_update()
 		message_box(MESSAGE_BOX_TYPE_ERROR, "PEN15", "TEXT OF THE ERROR MESSAGE")
 	end
 	
-	b2World_Step(world, CF_DELTA_TIME_FIXED, 4)
+	b2World_Step(world, DELTA_TIME_FIXED, 4)
 end
 
 function blue_text(fx)
@@ -160,8 +160,8 @@ function main()
 		
 		b2World_Draw(world, debug_draw)
 		
-		if CF_DELTA_TIME > 0 then
-			fps = lerp(1.0 / 10.0, fps, 1.0 / CF_DELTA_TIME)
+		if DELTA_TIME > 0 then
+			fps = lerp(1.0 / 10.0, fps, 1.0 / DELTA_TIME)
 		end
 		draw_text(tostring(fps), -300,-200,-1)
 		

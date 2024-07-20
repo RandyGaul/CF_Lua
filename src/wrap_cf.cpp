@@ -905,14 +905,14 @@ REF_WRAP_MANUAL(wrap_rnd_range_float);
 // -------------------------------------------------------------------------------------------------
 // Time
 
-REF_GLOBAL(CF_DELTA_TIME);
-REF_GLOBAL(CF_DELTA_TIME_FIXED);
-REF_GLOBAL(CF_DELTA_TIME_INTERPOLANT);
-REF_GLOBAL(CF_TICKS);
-REF_GLOBAL(CF_PREV_TICKS);
-REF_GLOBAL(CF_SECONDS);
-REF_GLOBAL(CF_PREV_SECONDS);
-REF_GLOBAL(CF_PAUSE_TIME_LEFT);
+REF_GLOBAL_EX(CF_DELTA_TIME, DELTA_TIME);
+REF_GLOBAL_EX(CF_DELTA_TIME_FIXED, DELTA_TIME_FIXED);
+REF_GLOBAL_EX(CF_DELTA_TIME_INTERPOLANT, DELTA_TIME_INTERPOLANT);
+REF_GLOBAL_EX(CF_TICKS, TICKS);
+REF_GLOBAL_EX(CF_PREV_TICKS, PREV_TICKS);
+REF_GLOBAL_EX(CF_SECONDS, SECONDS);
+REF_GLOBAL_EX(CF_PREV_SECONDS, PREV_SECONDS);
+REF_GLOBAL_EX(CF_PAUSE_TIME_LEFT, PAUSE_TIME_LEFT);
 
 REF_FUNCTION(set_fixed_timestep);
 REF_FUNCTION(set_fixed_timestep_max_updates);
@@ -951,7 +951,7 @@ REF_FUNCTION(sleep);
 // -------------------------------------------------------------------------------------------------
 // Version
 
-REF_CONSTANT(CF_VERSION_STRING_COMPILED);
+REF_CONSTANT_EX(CF_VERSION_STRING_COMPILED, VERSION_STRING_COMPILED);
 REF_FUNCTION(version_string_linked);
 
 // -------------------------------------------------------------------------------------------------

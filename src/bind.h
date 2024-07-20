@@ -95,6 +95,9 @@ int REF_SyncGlobals(lua_State* L);
 // The constant will be cast to 64-bit `uintptr_t`.
 #define REF_CONSTANT(C)
 
+// Expose a constant to the reflection system with a custom name.
+#define REF_CONSTANT_EX(C, name)
+
 // Expose a struct to the reflection system.
 // Use it alongside `REF_MEMBER`. Example:
 // 
@@ -149,6 +152,9 @@ int REF_SyncGlobals(lua_State* L);
 // This will get sync'd to Lua each time REF_SyncGlobals is called. Note that REF_SyncGlobals is also
 // callable from Lua.
 #define REF_GLOBAL(G)
+
+// Expose a global variable to the reflection system with a custom name.
+#define REF_GLOBAL_EX(G, name)
 
 // Call a function in Lua.
 // The return values *must* be in an initializer list. Be sure they are proper l-values (no literals), because
@@ -1170,6 +1176,11 @@ int REF_CallLuaFunction(lua_State* L, const char* fn_name)
 #define REF_CONSTANT(C) \
 	REF_Constant g_##C##_REF_Constant(#C, C)
 
+// Automatically bind a constant to Lua with a custom name.
+#undef REF_CONSTANT_EX
+#define REF_CONSTANT_EX(C, name) \
+	REF_Constant g_##C##_REF_Constant(#name, C)
+
 // Expose a struct to the reflection system.
 #undef REF_STRUCT
 #define REF_STRUCT(T, ...) \
@@ -1266,6 +1277,11 @@ struct REF_Global : REF_List<REF_Global>
 #undef REF_GLOBAL
 #define REF_GLOBAL(G) \
 	REF_Global g_##G(#G, &G)
+
+// Expose a global variable to the reflection system with a custom name.
+#undef REF_GLOBAL_EX
+#define REF_GLOBAL_EX(G, name) \
+	REF_Global g_##G(#name, &G)
 
 // Sync all global variable values to Lua.
 int REF_SyncGlobals(lua_State* L)
