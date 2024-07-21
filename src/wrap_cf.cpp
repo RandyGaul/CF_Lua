@@ -287,6 +287,7 @@ REF_FUNCTION(app_get_power_percentage_left);
 // Audio
 
 REF_HANDLE_TYPE(CF_Audio);
+REF_FUNCTION_EX(audio_cull_duplicates, cf_audio_cull_duplicates);
 REF_FUNCTION(audio_load_ogg);
 REF_FUNCTION(audio_load_wav);
 REF_FUNCTION(audio_load_ogg_from_memory);
@@ -321,6 +322,7 @@ REF_STRUCT(SoundParams,
 	REF_MEMBER(pitch),
 );
 
+REF_HANDLE_TYPE(CF_Sound);
 REF_HANDLE_TYPE(Sound);
 
 SoundParams sound_params_defaults() { return SoundParams(); }
@@ -337,6 +339,17 @@ REF_FUNCTION(sound_set_volume);
 REF_FUNCTION(sound_set_pitch);
 REF_FUNCTION(sound_set_sample_index);
 REF_FUNCTION(sound_stop);
+
+void wrap_on_sound_finish(CF_Sound snd, void* udata)
+{
+	const char* lua_fn_name = (const char*)udata;
+	REF_CallLuaFunction(L, lua_fn_name, { }, snd);
+}
+void wrap_sound_set_on_finish(const char* lua_fn_name)
+{
+	cf_sound_set_on_finish_callback(wrap_on_sound_finish, (void*)lua_fn_name, true);
+}
+REF_FUNCTION_EX(sound_set_on_finish, wrap_sound_set_on_finish);
 
 // -------------------------------------------------------------------------------------------------
 // Clipboard

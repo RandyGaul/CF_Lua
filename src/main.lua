@@ -11,6 +11,12 @@ sprite_set_scale(spr, 4,4)
 dbg_thickness = 0
 fps = 1
 
+jump = audio_load_wav("jump.wav")
+function on_sound_finish(snd)
+	print("Sound finished: "..tostring(snd))
+end
+sound_set_on_finish("on_sound_finish")
+
 function dbg_draw_polygon(verts, cr, cg, cb, ca)
 	draw_push_color(cr, cg, cb, ca)
 	draw_polyline(verts, dbg_thickness, true)
@@ -121,7 +127,8 @@ function on_update()
 	REF_SyncGlobals()
 		
 	if key_just_pressed(KEY_SPACE) then
-		message_box(MESSAGE_BOX_TYPE_ERROR, "PEN15", "TEXT OF THE ERROR MESSAGE")
+		local def = sound_params_defaults()
+		play_sound(jump, def)
 	end
 	
 	b2World_Step(world, DELTA_TIME_FIXED, 4)
@@ -155,8 +162,6 @@ function main()
 			local text = "<blue>Hello</blue>"
 			draw_text(text, 150,0, #text)
 		end
-		draw_circle(-100,100, 50, 10)
-		draw_quad(-100,-100, 100,100, 5, 5)
 		
 		draw_polyline({ -300,200, 0,250, 300,200 }, 5, false)
 		

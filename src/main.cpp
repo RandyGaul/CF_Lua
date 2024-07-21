@@ -59,9 +59,19 @@ REF_FUNCTION(dump_lua_api);
 // -------------------------------------------------------------------------------------------------
 // Main
 
+void mount_content_directory_as(const char* dir)
+{
+	Path path = fs_get_base_directory();
+	path.normalize();
+	path.pop(2); // Pop out of build/debug/
+	path += "/content";
+	fs_mount(path.c_str(), dir);
+}
+
 int main(int argc, char* argv[])
 {
-	make_app("CF in Lua", 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_NO_AUDIO, argv[0]);
+	make_app("CF in Lua", 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+	mount_content_directory_as("/");
 	::L = luaL_newstate();
 	luaL_openlibs(L);
 	REF_BindLua(L);
