@@ -1,5 +1,9 @@
 dump_lua_api()
 
+make_app("CF in Lua", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv0)
+mount_directory_as("/content", "/")
+load_shaders()
+
 def = b2DefaultWorldDef()
 world = b2CreateWorld(def)
 
@@ -16,6 +20,7 @@ function on_sound_finish(snd)
 	print("Sound finished: "..tostring(snd))
 end
 sound_set_on_finish("on_sound_finish")
+audio_cull_duplicates(false)
 
 function dbg_draw_polygon(verts, cr, cg, cb, ca)
 	draw_push_color(cr, cg, cb, ca)

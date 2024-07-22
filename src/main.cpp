@@ -17,7 +17,7 @@ Map<const char*, CF_Shader> g_shaders;
 #define ADD_SHADER(S) \
 	g_shaders.add(sintern(#S "_shader"), CF_MAKE_SOKOL_SHADER(S##_shader))
 
-void LoadShaders()
+void load_shaders()
 {
 	// Add more shaders here as necessary. Don't forget to include it's associated header.
 	ADD_SHADER(flash);
@@ -59,23 +59,23 @@ REF_FUNCTION(dump_lua_api);
 // -------------------------------------------------------------------------------------------------
 // Main
 
-void mount_content_directory_as(const char* dir)
+void mount_directory_as(const char* to_mount, const char* dir)
 {
 	Path path = fs_get_base_directory();
 	path.normalize();
 	path.pop(2); // Pop out of build/debug/
-	path += "/content";
+	path += to_mount;
 	fs_mount(path.c_str(), dir);
 }
 
+REF_FUNCTION(mount_directory_as);
+REF_FUNCTION(load_shaders);
+
 int main(int argc, char* argv[])
 {
-	make_app("CF in Lua", 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
-	mount_content_directory_as("/");
 	::L = luaL_newstate();
 	luaL_openlibs(L);
 	REF_BindLua(L);
-	LoadShaders();
 
 	if (luaL_dofile(L, "../../src/main.lua")) {
 		fprintf(stderr, lua_tostring(L, -1));

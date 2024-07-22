@@ -240,6 +240,17 @@ REF_FUNCTION_EX(clear_color, cf_clear_color);
 
 CF_APP_OPTION_DEFS
 CF_POWER_STATE_DEFS
+CF_DISPLAY_ORIENTATION_DEFS
+
+REF_FUNCTION(display_count);
+REF_FUNCTION(display_x);
+REF_FUNCTION(display_y);
+REF_FUNCTION(display_width);
+REF_FUNCTION(display_height);
+REF_FUNCTION(display_refresh_rate);
+REF_FUNCTION(display_bounds);
+REF_FUNCTION(display_name);
+REF_FUNCTION(display_orientation);
 
 REF_FUNCTION(make_app);
 REF_FUNCTION(destroy_app);
@@ -565,6 +576,7 @@ REF_STRUCT(CF_Stat,
 	REF_MEMBER(last_accessed_time),
 );
 
+REF_FUNCTION_EX(fs_init, cf_fs_init);
 REF_FUNCTION(fs_get_base_directory);
 REF_FUNCTION(fs_set_write_directory);
 REF_FUNCTION(fs_get_user_directory);
