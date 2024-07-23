@@ -1030,12 +1030,13 @@ int REF_LuaCFunction(lua_State* L)
 		}
 	}
 
-	// Pass return value back to Lua.
+	// Pass return value(s) back to Lua.
 	if (ret.type->size() > 0) {
 		ret.type->lua_set(L, ret.v);
+		return ret.type->flattened_count();
+	} else {
+		return 0;
 	}
-
-	return ret.type->size() > 0 ? 1 : 0;
 }
 
 // Represents a global constant for binding to Lua.

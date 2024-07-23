@@ -32,7 +32,7 @@ REF_FLAT_FLOATS(v2);
 REF_FLAT_FLOATS(CF_M2x2);
 REF_FLAT_FLOATS(CF_M3x2);
 REF_FLAT_FLOATS(CF_Aabb);
-REF_FLAT_FLOATS(CF_Rect);
+REF_FLAT_INTS(CF_Rect);
 REF_FLAT_FLOATS(CF_Color);
 REF_FLAT_FLOATS(CF_Circle);
 REF_FLAT_FLOATS(CF_Capsule);
@@ -95,6 +95,8 @@ REF_FUNCTION(circle_to_poly_manifold);
 REF_FUNCTION(aabb_to_poly_manifold);
 REF_FUNCTION(capsule_to_poly_manifold);
 REF_FUNCTION(poly_to_poly_manifold);
+
+REF_FUNCTION(ortho_2d);
 
 // -------------------------------------------------------------------------------------------------
 // Graphics
@@ -263,8 +265,8 @@ REF_FUNCTION(app_get_height);
 v2 wrap_app_get_position() { int x, y; app_get_position(&x, &y); return V2((float)x, (float)y); }
 REF_FUNCTION_EX(app_get_position, wrap_app_get_position);
 REF_FUNCTION(app_set_position);
-v2 wrap_app_get_size() { int x, y; app_get_size(&x, &y); return V2((float)x, (float)y); }
 REF_FUNCTION(app_set_size);
+v2 wrap_app_get_size() { int x, y; app_get_size(&x, &y); return V2((float)x, (float)y); }
 REF_FUNCTION_EX(app_get_size, wrap_app_get_size);
 REF_FUNCTION(app_get_dpi_scale);
 REF_FUNCTION(app_dpi_scaled_was_changed);
@@ -288,6 +290,11 @@ REF_FUNCTION(app_get_vsync);
 REF_FUNCTION(app_init_imgui);
 REF_FUNCTION(app_get_canvas);
 REF_FUNCTION(app_set_canvas_size);
+REF_FUNCTION(app_set_windowed_mode);
+REF_FUNCTION(app_set_borderless_fullscreen_mode);
+REF_FUNCTION(app_set_fullscreen_mode);
+REF_FUNCTION(app_set_title);
+REF_FUNCTION(app_set_icon);
 CF_PowerState app_get_power_state() { CF_PowerInfo info = app_power_info(); return info.state; }
 int app_get_power_seconds_left() { CF_PowerInfo info = app_power_info(); return info.seconds_left; }
 int app_get_power_percentage_left() { CF_PowerInfo info = app_power_info(); return info.percentage_left; }
@@ -996,11 +1003,10 @@ REF_WRAP_MANUAL(wrap_make_demo_sprite);
 int wrap_make_sprite(lua_State* L)
 {
 	if (!g_sprite_pool) g_sprite_pool = make_memory_pool(sizeof(CF_Sprite), 1024 * 1024, 8);
-	char* path;
-	REF_LuaGet(L, -1, &path);
-	lua_pop(L, 1);
+	const char* path = lua_tostring(L, -1);
 	CF_Sprite* s = (CF_Sprite*)memory_pool_alloc(g_sprite_pool);
 	*s = make_sprite(path);
+	lua_pop(L, 1);
 	REF_LuaSet(L, &s);
 	return 1;
 }
@@ -1010,8 +1016,20 @@ int wrap_destroy_sprite(lua_State* L)
 {
 	CF_Sprite* s;
 	REF_LuaGet(L, -1, &s);
+	assert(s);
 	lua_pop(L, 1);
 	memory_pool_free(g_sprite_pool, s);
 	return 0;
 }
 REF_WRAP_MANUAL(wrap_destroy_sprite);
+
+int wrap_make_easy_sprite(lua_State* L)
+{
+	if (!g_sprite_pool) g_sprite_pool = make_memory_pool(sizeof(CF_Sprite), 1024 * 1024, 8);
+	const char* path = lua_tostring(L, -1);
+	CF_Sprite* s = (CF_Sprite*)memory_pool_alloc(g_sprite_pool);
+	*s = cf_make_easy_sprite_from_png(path, NULL);
+	REF_LuaSet(L, &s);
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_make_easy_sprite);

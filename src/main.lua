@@ -1,7 +1,8 @@
 dump_lua_api()
 
-make_app("CF in Lua", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv0)
+make_app("CF in Lua", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED + APP_OPTIONS_RESIZABLE, argv0)
 mount_directory_as("/content", "/")
+app_set_icon("CF_Logo_Pixel.png")
 load_shaders()
 
 def = b2DefaultWorldDef()
@@ -155,9 +156,12 @@ end
 function main()
 	set_fixed_timestep(60)
 	text_effect_register("blue", "blue_text")
+	local cf_mascot = make_easy_sprite("CF_Logo_Pixel.png")
 
 	while app_is_running() do
 		app_update("on_update")
+		draw_projection(ortho_2d(0,0,640,480))
+		
 		draw_push_layer(1)
 		sprite_update(spr)
 		draw_sprite(spr)
@@ -168,9 +172,15 @@ function main()
 			draw_text(text, 150,0, #text)
 		end
 		
+		print(display_bounds(0))
+		
 		draw_polyline({ -300,200, 0,250, 300,200 }, 5, false)
 		
 		b2World_Draw(world, debug_draw)
+		
+		draw_translate(-100,0)
+		draw_sprite(cf_mascot)
+		draw_pop()
 		
 		if DELTA_TIME > 0 then
 			fps = lerp(1.0 / 10.0, fps, 1.0 / DELTA_TIME)
