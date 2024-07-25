@@ -9,6 +9,7 @@ lua_State* L;
 // Manually bind shaders.
 
 #include "../shaders/flash_shader.h"
+#include "../shaders/gray_shader.h"
 
 // Keeps track of all available custom shaders in a global table. These can get fetched by Lua.
 // This requires us to compile shaders into the executable in C++.
@@ -21,6 +22,7 @@ void load_shaders()
 {
 	// Add more shaders here as necessary. Don't forget to include it's associated header.
 	ADD_SHADER(flash);
+	ADD_SHADER(gray);
 }
 
 int wrap_make_shader(lua_State* L)
