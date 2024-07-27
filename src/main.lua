@@ -1,5 +1,5 @@
 dump_lua_api()
-make_app("CF in Lua", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv0)
+make_app("CF in Lua", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED + APP_OPTIONS_RESIZABLE, argv0)
 mount_directory_as("/content", "/")
 app_set_icon("CF_Logo_Pixel.png")
 load_shaders()
@@ -17,6 +17,10 @@ function main()
     while app_is_running() do
         app_update()
         REF_SyncGlobals()
+		
+		if key_just_pressed(KEY_SPACE) then
+			app_set_size(640*2,480*2)
+		end
         
         sprite_update(girl)
         draw_scale(4,4)

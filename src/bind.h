@@ -26,8 +26,8 @@ extern "C" {
 // implements some higher level algorithms for automating Lua bindings.
 // 
 // To get going you must register your types with the reflection by calling a variety of macros. They
-// are designed ot be mostly one-liners. Once done, call `REF_BindLua` once from main, and that's it.
-// Make sure to call the macros at global scope.
+// are designed to be mostly one-liners. Once done, call `REF_BindLua` once from main, and that's it.
+// Make sure to call the macros at global scope, and keep it all in one translation unit (cpp file).
 // 
 // Happy Lua'ing!
 
@@ -68,9 +68,10 @@ extern "C" {
 void REF_BindLua(lua_State* L);
 
 // Syncs all global variables to Lua.
-// Callable from Lua Recommended to call this once per frame after gathering application inputs.
+// Callable from Lua. Recommended to call this once per frame after gathering application inputs.
 int REF_SyncGlobals(lua_State* L);
 
+// Expose a handle type to the reflection system.
 // You can use this on handles/ids 32/64-bits in size.
 #define REF_HANDLE_TYPE(H)
 
@@ -81,7 +82,9 @@ int REF_SyncGlobals(lua_State* L);
 //     REF_FUNCTION(make_hull, {0,1});
 // 
 // The brackets {0,1} specify an array/count parameter pair. You may set as many of these
-// array pairs as you like in a comma separated list.
+// array pairs as you like in a comma separated list. The pair can be any indices, including
+// any order, or even various pointers referring to the same count parameter. More examples
+// and details found later in the docs (see "Notes on arrays").
 #define REF_FUNCTION(F)
 
 // Expose a function to the reflection system. It will be bound to Lua with a custom name.
@@ -224,7 +227,7 @@ int REF_SyncGlobals(lua_State* L);
 // 
 // We can call this in Lua like so:
 // 
-//     hull = make_hul(vertices)
+//     hull = make_hull(vertices)
 //
 // This will work so long as the array parameter pair is marked when binding, like so:
 // 
@@ -235,7 +238,7 @@ int REF_SyncGlobals(lua_State* L);
 //     void example(int data0*, int count0, const char* name, int count1, float f, int* data1);
 //     REF_FUNCTION(example, {0,1}, {5,3});
 // 
-// Which would be called in Lua like so:
+// Which would be called in Lua like so (yes this function is crazy, but it can be done):
 // 
 //     ex = example(data0, name, f, data1)
 // 
