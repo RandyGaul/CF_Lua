@@ -121,7 +121,7 @@ REF_STRUCT(b2ChainDef,
 REF_STRUCT(b2MassData,
 	REF_MEMBER(mass),
 	REF_MEMBER(center),
-	REF_MEMBER(I),
+	REF_MEMBER(rotationalInertia),
 );
 
 REF_STRUCT(b2Filter,
@@ -381,6 +381,9 @@ REF_CONSTANT(b2_toiStateOverlapped);
 REF_CONSTANT(b2_toiStateHit);
 REF_CONSTANT(b2_toiStateSeparated);
 
+REF_FUNCTION(b2SetLengthUnitsPerMeter);
+REF_FUNCTION(b2GetLengthUnitsPerMeter);
+
 REF_FUNCTION(b2GetByteCount);
 REF_FUNCTION(b2GetVersion);
 REF_FUNCTION(b2DefaultWorldDef);
@@ -636,6 +639,8 @@ REF_FUNCTION(b2Shape_GetSegment);
 REF_FUNCTION(b2Shape_GetSmoothSegment);
 REF_FUNCTION(b2Shape_GetCapsule);
 REF_FUNCTION(b2Shape_GetPolygon);
+REF_FUNCTION(b2Shape_SetUserData);
+REF_FUNCTION(b2Shape_GetUserData);
 
 void wrap_b2Shape_SetCircle(b2ShapeId shapeId, b2Circle shape) { b2Shape_SetCircle(shapeId, &shape); }
 REF_FUNCTION_EX(b2Shape_SetCircle, wrap_b2Shape_SetCircle);
@@ -869,15 +874,15 @@ b2Manifold wrap_b2CollideSegmentAndCircle(b2Segment a, b2Transform xa, b2Circle 
 REF_FUNCTION_EX(b2CollideSegmentAndCircle, wrap_b2CollideSegmentAndCircle);
 b2Manifold wrap_b2CollidePolygonAndCircle(b2Polygon a, b2Transform xa, b2Circle b, b2Transform xb) { return b2CollidePolygonAndCircle(&a, xa, &b, xb); }
 REF_FUNCTION_EX(b2CollidePolygonAndCircle, wrap_b2CollidePolygonAndCircle);
-b2Manifold wrap_b2CollideCapsules(b2Capsule a, b2Transform xa, b2Capsule b, b2Transform xb) { b2DistanceCache c = { 0 }; return b2CollideCapsules(&a, xa, &b, xb, &c); }
+b2Manifold wrap_b2CollideCapsules(b2Capsule a, b2Transform xa, b2Capsule b, b2Transform xb) { return b2CollideCapsules(&a, xa, &b, xb); }
 REF_FUNCTION_EX(b2CollideCapsules, wrap_b2CollideCapsules);
-b2Manifold wrap_b2CollideSegmentAndCapsule(b2Segment a, b2Transform xa, b2Capsule b, b2Transform xb) { b2DistanceCache c = { 0 }; return b2CollideSegmentAndCapsule(&a, xa, &b, xb, &c); }
+b2Manifold wrap_b2CollideSegmentAndCapsule(b2Segment a, b2Transform xa, b2Capsule b, b2Transform xb) { return b2CollideSegmentAndCapsule(&a, xa, &b, xb); }
 REF_FUNCTION_EX(b2CollideSegmentAndCapsule, wrap_b2CollideSegmentAndCapsule);
-b2Manifold wrap_b2CollidePolygonAndCapsule(b2Polygon a, b2Transform xa, b2Capsule b, b2Transform xb) { b2DistanceCache c = { 0 }; return b2CollidePolygonAndCapsule(&a, xa, &b, xb, &c); }
+b2Manifold wrap_b2CollidePolygonAndCapsule(b2Polygon a, b2Transform xa, b2Capsule b, b2Transform xb) { return b2CollidePolygonAndCapsule(&a, xa, &b, xb); }
 REF_FUNCTION_EX(b2CollidePolygonAndCapsule, wrap_b2CollidePolygonAndCapsule);
-b2Manifold wrap_b2CollidePolygons(b2Polygon a, b2Transform xa, b2Polygon b, b2Transform xb) { b2DistanceCache c = { 0 }; return b2CollidePolygons(&a, xa, &b, xb, &c); }
+b2Manifold wrap_b2CollidePolygons(b2Polygon a, b2Transform xa, b2Polygon b, b2Transform xb) { return b2CollidePolygons(&a, xa, &b, xb); }
 REF_FUNCTION_EX(b2CollidePolygons, wrap_b2CollidePolygons);
-b2Manifold wrap_b2CollideSegmentAndPolygon(b2Segment a, b2Transform xa, b2Polygon b, b2Transform xb) { b2DistanceCache c = { 0 }; return b2CollideSegmentAndPolygon(&a, xa, &b, xb, &c); }
+b2Manifold wrap_b2CollideSegmentAndPolygon(b2Segment a, b2Transform xa, b2Polygon b, b2Transform xb) { return b2CollideSegmentAndPolygon(&a, xa, &b, xb); }
 REF_FUNCTION_EX(b2CollideSegmentAndPolygon, wrap_b2CollideSegmentAndPolygon);
 b2Manifold wrap_b2CollideSmoothSegmentAndCircle(b2SmoothSegment a, b2Transform xa, b2Circle b, b2Transform xb) { return b2CollideSmoothSegmentAndCircle(&a, xa, &b, xb); }
 REF_FUNCTION_EX(b2CollideSmoothSegmentAndCircle, wrap_b2CollideSmoothSegmentAndCircle);
