@@ -381,6 +381,9 @@ REF_CONSTANT(b2_toiStateOverlapped);
 REF_CONSTANT(b2_toiStateHit);
 REF_CONSTANT(b2_toiStateSeparated);
 
+REF_FUNCTION(b2SetLengthUnitsPerMeter);
+REF_FUNCTION(b2GetLengthUnitsPerMeter);
+
 REF_FUNCTION(b2GetByteCount);
 REF_FUNCTION(b2GetVersion);
 REF_FUNCTION(b2DefaultWorldDef);
@@ -636,6 +639,8 @@ REF_FUNCTION(b2Shape_GetSegment);
 REF_FUNCTION(b2Shape_GetSmoothSegment);
 REF_FUNCTION(b2Shape_GetCapsule);
 REF_FUNCTION(b2Shape_GetPolygon);
+REF_FUNCTION(b2Shape_SetUserData);
+REF_FUNCTION(b2Shape_GetUserData);
 
 void wrap_b2Shape_SetCircle(b2ShapeId shapeId, b2Circle shape) { b2Shape_SetCircle(shapeId, &shape); }
 REF_FUNCTION_EX(b2Shape_SetCircle, wrap_b2Shape_SetCircle);
