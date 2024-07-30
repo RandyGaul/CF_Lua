@@ -418,7 +418,6 @@ int wrap_b2World_GetContactEvents(lua_State* L)
 	b2WorldId worldId = REF_Cast<b2WorldId>(lua_tointeger(L, -1));
 	lua_pop(L, 1);
 	b2ContactEvents events = b2World_GetContactEvents(worldId);
-	if (events.hitCount) __debugbreak();
 	REF_LuaSet(L, &events);
 	return 1;
 }
