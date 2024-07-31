@@ -93,7 +93,7 @@ REF_CONSTANT(b2_dynamicBody);
 REF_STRUCT(b2BodyDef,
 	REF_MEMBER(type),
 	REF_MEMBER(position),
-	REF_MEMBER(angle),
+	REF_MEMBER(rotation),
 	REF_MEMBER(linearVelocity),
 	REF_MEMBER(angularVelocity),
 	REF_MEMBER(linearDamping),
@@ -549,7 +549,6 @@ REF_FUNCTION(b2Body_GetType);
 REF_FUNCTION(b2Body_SetType);
 REF_FUNCTION(b2Body_GetPosition);
 REF_FUNCTION(b2Body_GetRotation);
-REF_FUNCTION(b2Body_GetAngle);
 REF_FUNCTION(b2Body_GetTransform);
 REF_FUNCTION(b2Body_SetTransform);
 REF_FUNCTION(b2Body_GetLocalPoint);
@@ -639,8 +638,6 @@ REF_FUNCTION(b2Shape_GetSegment);
 REF_FUNCTION(b2Shape_GetSmoothSegment);
 REF_FUNCTION(b2Shape_GetCapsule);
 REF_FUNCTION(b2Shape_GetPolygon);
-REF_FUNCTION(b2Shape_SetUserData);
-REF_FUNCTION(b2Shape_GetUserData);
 
 void wrap_b2Shape_SetCircle(b2ShapeId shapeId, b2Circle shape) { b2Shape_SetCircle(shapeId, &shape); }
 REF_FUNCTION_EX(b2Shape_SetCircle, wrap_b2Shape_SetCircle);
@@ -816,6 +813,7 @@ REF_FUNCTION(b2MakeSquare);
 REF_FUNCTION(b2MakeBox);
 REF_FUNCTION(b2MakeRoundedBox);
 REF_FUNCTION(b2MakeOffsetBox);
+REF_FUNCTION(b2MakeRot);
 b2Polygon wrap_b2TransformPolygon(b2Transform transform, b2Polygon polygon) { return b2TransformPolygon(transform, &polygon); }
 REF_FUNCTION_EX(b2TransformPolygon, wrap_b2TransformPolygon);
 b2MassData wrap_b2ComputeCircleMass(b2Circle shape, float density) { return b2ComputeCircleMass(&shape, density); }
