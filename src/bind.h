@@ -688,8 +688,10 @@ struct REF_Struct : public REF_Type
 				void* data = mv;
 				if (m->is_array_external) {
 					void* data = *(void**)mv;
+					REF_LuaSetArray(L, data, m->type->dereference_type(), n);
+				} else {
+					REF_LuaSetArray(L, data, m->type, n);
 				}
-				REF_LuaSetArray(L, data, m->type, n);
 			} else {
 				// Non-array member.
 				int n = m->type->flattened_count();
