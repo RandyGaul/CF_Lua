@@ -266,6 +266,7 @@ v2 wrap_app_get_position() { int x, y; app_get_position(&x, &y); return V2((floa
 REF_FUNCTION_EX(app_get_position, wrap_app_get_position);
 REF_FUNCTION(app_set_position);
 REF_FUNCTION(app_set_size);
+REF_FUNCTION(app_show_window);
 v2 wrap_app_get_size() { int x, y; app_get_size(&x, &y); return V2((float)x, (float)y); }
 REF_FUNCTION_EX(app_get_size, wrap_app_get_size);
 REF_FUNCTION(app_get_dpi_scale);
@@ -350,6 +351,7 @@ REF_FUNCTION(sound_is_active);
 REF_FUNCTION(sound_get_is_paused);
 REF_FUNCTION(sound_get_is_looped);
 REF_FUNCTION(sound_get_volume);
+REF_FUNCTION(sound_get_pitch);
 REF_FUNCTION(sound_get_sample_index);
 REF_FUNCTION(sound_set_is_paused);
 REF_FUNCTION(sound_set_is_looped);

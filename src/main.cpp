@@ -65,7 +65,7 @@ void mount_directory_as(const char* to_mount, const char* dir)
 {
 	Path path = fs_get_base_directory();
 	path.normalize();
-	path.pop(2); // Pop out of build/debug/
+	//path.pop(2); // Pop out of build/debug/
 	path += to_mount;
 	fs_mount(path.c_str(), dir);
 }
@@ -79,7 +79,8 @@ int main(int argc, char* argv[])
 	luaL_openlibs(L);
 	REF_BindLua(L);
 
-	if (luaL_dofile(L, "../../src/main.lua")) {
+	//if (luaL_dofile(L, "../../src/main.lua")) {
+	if (luaL_dofile(L, "main.lua")) {
 		fprintf(stderr, lua_tostring(L, -1));
 		return -1;
 	}
