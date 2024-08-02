@@ -371,6 +371,17 @@ void wrap_sound_set_on_finish(const char* lua_fn_name)
 }
 REF_FUNCTION_EX(sound_set_on_finish, wrap_sound_set_on_finish);
 
+void wrap_on_music_finish(void* udata)
+{
+	const char* lua_fn_name = (const char*)udata;
+	REF_CallLuaFunction(L, lua_fn_name);
+}
+void wrap_music_set_on_finish(const char* lua_fn_name)
+{
+	cf_music_set_on_finish_callback(wrap_on_music_finish, (void*)lua_fn_name, true);
+}
+REF_FUNCTION_EX(music_set_on_finish, wrap_music_set_on_finish);
+
 // -------------------------------------------------------------------------------------------------
 // Clipboard
 
