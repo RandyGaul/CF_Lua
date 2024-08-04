@@ -1079,6 +1079,19 @@ struct REF_Constant : REF_List<REF_Constant>
 // Facilitates a call to any Lua function.
 int REF_CallLuaFunctionHelper(lua_State* L, const char* fn_name, const REF_Variable* rets, int ret_count, const REF_Variable* params, int param_count)
 {
+	// Print stack trace upon errors.
+	static auto traceback = [](lua_State* L) -> int {
+		const char* msg = lua_tostring(L, 1);
+		if (msg) {
+			luaL_traceback(L, L, msg, 1);
+		} else if (!lua_isnoneornil(L, 1)) {
+			// Print __tostring for error objects, if they exist.
+			if (!luaL_callmeta(L, 1, "__tostring"))
+				lua_pushliteral(L, "(no error message)");
+		}
+		return 1;
+	};
+	lua_pushcfunction(L, traceback);
 	int base = lua_gettop(L);
 
 	// Fetch the function in Lua.
@@ -1102,13 +1115,16 @@ int REF_CallLuaFunctionHelper(lua_State* L, const char* fn_name, const REF_Varia
 	}
 
 	// Call the actual Lua function.
-	if (lua_pcall(L, flattened_param_count, LUA_MULTRET, 0) != LUA_OK) {
+	if (lua_pcall(L, flattened_param_count, LUA_MULTRET, base) != LUA_OK) {
 		fprintf(stderr, "%s\n", lua_tostring(L, -1));
 		exit(-1);
 	}
 
+	// Remove the stack trace function.
+	lua_remove(L, base);
+
 	// Fetch the return values.
-	int nresults = lua_gettop(L) - base;
+	int nresults = lua_gettop(L) - base + 1;
 	if (nresults != ret_count) {
 		fprintf(stderr, "Mismatch of return values from Lua, expected %d, got %d.\n", ret_count, nresults);
 	}
