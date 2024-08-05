@@ -1,5 +1,3 @@
-Error reporting missing line numbers sometimes
 sprite sheet
 joypad
 music callback debug
-show callstack on crash
