@@ -339,6 +339,7 @@ REF_STRUCT(SoundParams,
 	REF_MEMBER(volume),
 	REF_MEMBER(pan),
 	REF_MEMBER(pitch),
+	REF_MEMBER(sample_index),
 );
 
 REF_HANDLE_TYPE(CF_Sound);
