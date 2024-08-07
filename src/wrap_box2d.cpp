@@ -93,7 +93,7 @@ REF_CONSTANT(b2_dynamicBody);
 REF_STRUCT(b2BodyDef,
 	REF_MEMBER(type),
 	REF_MEMBER(position),
-	REF_MEMBER(angle),
+	REF_MEMBER(rotation),
 	REF_MEMBER(linearVelocity),
 	REF_MEMBER(angularVelocity),
 	REF_MEMBER(linearDamping),
