@@ -433,6 +433,8 @@ REF_FUNCTION_EX(draw_quad, cf_draw_quad);
 REF_FUNCTION_EX(draw_quad_fill, cf_draw_quad_fill);
 REF_FUNCTION_EX(draw_box, cf_draw_quad);
 REF_FUNCTION_EX(draw_box_fill, cf_draw_quad_fill);
+REF_FUNCTION(draw_box_rounded);
+REF_FUNCTION(draw_box_rounded_fill);
 REF_FUNCTION_EX(draw_circle, cf_draw_circle);
 REF_FUNCTION_EX(draw_circle_fill, cf_draw_circle_fill);
 REF_FUNCTION_EX(draw_capsule, cf_draw_capsule);
