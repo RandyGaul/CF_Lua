@@ -9,8 +9,9 @@ uniform sampler2D tex;
 
 vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
 {
-	float d = distance(screen_uv, vec2(1));
-	return vec4(d,d,d, 1);
+	float d = texture(tex, screen_uv).x;
+	d = d > 0.5 ? 1.0 : 0.0;
+	return vec4(vec3(d), 1);
 }
 @end
 
