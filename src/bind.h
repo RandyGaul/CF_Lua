@@ -945,6 +945,9 @@ private:
 	void (*m_fn_wrapper)(void (*)(), REF_Variable, REF_Variable*, int);
 };
 
+template <typename... Params>
+int REF_CallLuaFunction(lua_State* L, const char* fn_name, std::initializer_list<REF_Variable> return_values, Params... params);
+
 // The function used to automatically bind functions to Lua, capable of calling C-style functions.
 int REF_LuaCFunction(lua_State* L)
 {
@@ -976,8 +979,13 @@ int REF_LuaCFunction(lua_State* L)
 	}
 
 	if (lua_gettop(L) < param_count_without_array_counts) {
-		fprintf(stderr, "Mismatch of parameter count (%d) when calling %s (expected %d).\n", lua_gettop(L), fn->name(), param_count_without_array_counts);
-		exit(-1);
+		String s = String::fmt("Mismatch of parameter count (%d) when calling %s (expected %d).\n", lua_gettop(L), fn->name(), param_count_without_array_counts);
+		luaL_traceback(L, L, s.c_str(), 1);
+		const char* error_and_stack_trace = lua_tostring(L, -1);
+		s = error_and_stack_trace;
+		lua_pop(L, 1);
+		REF_CallLuaFunction(L, "REF_ErrorHandler", { }, s.c_str());
+		return 0;
 	}
 
 	// Read in each parameter from Lua.
@@ -1026,7 +1034,7 @@ int REF_LuaCFunction(lua_State* L)
 	for (int i = 0; i < param_count; ++i) {
 		params[i].type->cleanup(params[i].v);
 
-		// Free any dymaically allocated arrays.
+		// Free any dynamically allocated arrays.
 		if (params[i].is_array) {
 			int sz = params[i].type->size() * params[i].array_count;
 			if (sz > alloca_limit) {
@@ -1075,9 +1083,6 @@ struct REF_Constant : REF_List<REF_Constant>
 	uintptr_t constant;
 	const REF_Type* type;
 };
-
-template <typename... Params>
-int REF_CallLuaFunction(lua_State* L, const char* fn_name, std::initializer_list<REF_Variable> return_values, Params... params);
 
 // Facilitates a call to any Lua function.
 int REF_CallLuaFunctionHelper(lua_State* L, const char* fn_name, const REF_Variable* rets, int ret_count, const REF_Variable* params, int param_count)

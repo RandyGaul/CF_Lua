@@ -75,8 +75,35 @@ void mount_directory_as(const char* to_mount, const char* dir)
 REF_FUNCTION(mount_directory_as);
 REF_FUNCTION(load_shaders);
 
+void assert_traceback(const char* string)
+{
+	luaL_traceback(L, L, string, 1);
+	const char* error_and_stack_trace = lua_tostring(L, -1);
+	String s = error_and_stack_trace;
+	lua_pop(L, 1);
+	REF_CallLuaFunction(L, "REF_ErrorHandler", { }, s.c_str());
+}
+
+int b2_assert_override(const char* condition, const char* fileName, int lineNumber)
+{
+	String s = String::fmt("BOX2D ASSERTION: %s, %s, line %d\n", condition, fileName, lineNumber);
+	assert_traceback(s.c_str());
+	return 1;
+}
+
+void cf_assert_override(bool expr, const char* message, const char* file, int line)
+{
+	if (!expr) {
+		String s = String::fmt("CF_ASSERT(%s) : %s, line %d\n", message, file, line);
+		assert_traceback(s.c_str());
+	}
+}
+
 int main(int argc, char* argv[])
 {
+	b2SetAssertFcn(b2_assert_override);
+	cf_set_assert_handler(cf_assert_override);
+
 	::L = luaL_newstate();
 	luaL_openlibs(L);
 	REF_BindLua(L);
