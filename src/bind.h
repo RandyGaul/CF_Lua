@@ -1076,6 +1076,9 @@ struct REF_Constant : REF_List<REF_Constant>
 	const REF_Type* type;
 };
 
+template <typename... Params>
+int REF_CallLuaFunction(lua_State* L, const char* fn_name, std::initializer_list<REF_Variable> return_values, Params... params);
+
 // Facilitates a call to any Lua function.
 int REF_CallLuaFunctionHelper(lua_State* L, const char* fn_name, const REF_Variable* rets, int ret_count, const REF_Variable* params, int param_count)
 {
@@ -1116,8 +1119,8 @@ int REF_CallLuaFunctionHelper(lua_State* L, const char* fn_name, const REF_Varia
 
 	// Call the actual Lua function.
 	if (lua_pcall(L, flattened_param_count, LUA_MULTRET, base) != LUA_OK) {
-		fprintf(stderr, "%s\n", lua_tostring(L, -1));
-		exit(-1);
+		REF_CallLuaFunction(L, "REF_ErrorHandler", { }, lua_tostring(L, -1));
+		return 0;
 	}
 
 	// Remove the stack trace function.
@@ -1360,6 +1363,9 @@ void REF_BindLua(lua_State* L)
 		lua_pushcfunction(L, w->fn);
 		lua_setglobal(L, w->name);
 	}
+
+	// Manually bind a stub error handling function.
+	luaL_dostring(L, "function REF_ErrorHandler(error_text) print(error_text)\n os.exit(-1) end");
 
 	// Bind all globals.
 	REF_SyncGlobals(L);
