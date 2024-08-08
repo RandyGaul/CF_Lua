@@ -1133,3 +1133,14 @@ int wrap_make_easy_sprite(lua_State* L)
 	return 1;
 }
 REF_WRAP_MANUAL(wrap_make_easy_sprite);
+
+int wrap_make_premade_sprite(lua_State* L)
+{
+	if (!g_sprite_pool) g_sprite_pool = make_memory_pool(sizeof(CF_Sprite), 1024 * 1024, 8);
+	uint64_t image_id = lua_tointeger(L, -1);
+	CF_Sprite* s = (CF_Sprite*)memory_pool_alloc(g_sprite_pool);
+	*s = make_premade_sprite(image_id);
+	REF_LuaSet(L, &s);
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_make_premade_sprite);
