@@ -585,6 +585,18 @@ REF_STRUCT(CF_TemporaryImage,
 
 REF_FUNCTION_EX(fetch_image, cf_fetch_image);
 
+REF_STRUCT(CF_AtlasSubImage,
+	REF_MEMBER(image_id),
+	REF_MEMBER(w),
+	REF_MEMBER(h),
+	REF_MEMBER(minx),
+	REF_MEMBER(miny),
+	REF_MEMBER(maxx),
+	REF_MEMBER(maxy),
+);
+
+REF_FUNCTION(register_premade_atlas, {1,2});
+
 // -------------------------------------------------------------------------------------------------
 // File I/O
 
