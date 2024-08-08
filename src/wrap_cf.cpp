@@ -907,7 +907,79 @@ REF_FUNCTION_EX(noise2, cf_noise2);
 REF_FUNCTION_EX(noise3, cf_noise3);
 REF_FUNCTION_EX(noise4, cf_noise4);
 
-// @TODO Image helpers.
+int wrap_noise_pixels(lua_State* L)
+{
+	int w = (int)lua_tointeger(L, -4);
+	int h = (int)lua_tointeger(L, -3);
+	uint64_t seed = lua_tointeger(L, -2);
+	float scale = (float)lua_tonumber(L, -1);
+	lua_pop(L, 4);
+	CF_Pixel* pixels = noise_pixels(w, h, seed, scale);
+	int* pix = (int*)pixels;
+	lua_newtable(L);
+	REF_LuaSetArray(L, pix, w * h);
+	cf_free(pix);
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_noise_pixels);
+
+int wrap_noise_pixels_wrapped(lua_State* L)
+{
+	int w = (int)lua_tointeger(L, -6);
+	int h = (int)lua_tointeger(L, -5);
+	uint64_t seed = lua_tointeger(L, -4);
+	float scale = (float)lua_tonumber(L, -3);
+	float time = (float)lua_tonumber(L, -2);
+	float amplitude = (float)lua_tonumber(L, -1);
+	lua_pop(L, 6);
+	CF_Pixel* pixels = noise_pixels_wrapped(w, h, seed, scale, time, amplitude);
+	int* pix = (int*)pixels;
+	lua_newtable(L);
+	REF_LuaSetArray(L, pix, w * h);
+	cf_free(pix);
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_noise_pixels_wrapped);
+
+int wrap_noise_fbm_pixels(lua_State* L)
+{
+	int w = (int)lua_tointeger(L, -7);
+	int h = (int)lua_tointeger(L, -6);
+	uint64_t seed = lua_tointeger(L, -5);
+	float scale = (float)lua_tonumber(L, -4);
+	float lacunarity = (float)lua_tonumber(L, -3);
+	int octaves = (int)lua_tointeger(L, -2);
+	float falloff = (float)lua_tonumber(L, -1);
+	lua_pop(L, 7);
+	CF_Pixel* pixels = noise_fbm_pixels(w, h, seed, scale, lacunarity, octaves, falloff);
+	int* pix = (int*)pixels;
+	lua_newtable(L);
+	REF_LuaSetArray(L, pix, w * h);
+	cf_free(pix);
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_noise_fbm_pixels);
+
+int wrap_noise_fbm_pixels_wrapped(lua_State* L)
+{
+	int w = (int)lua_tointeger(L, -9);
+	int h = (int)lua_tointeger(L, -8);
+	uint64_t seed = lua_tointeger(L, -7);
+	float scale = (float)lua_tonumber(L, -6);
+	float lacunarity = (float)lua_tonumber(L, -5);
+	int octaves = (int)lua_tointeger(L, -4);
+	float falloff = (float)lua_tonumber(L, -3);
+	float time = (float)lua_tonumber(L, -2);
+	float time_amplitude = (float)lua_tonumber(L, -1);
+	lua_pop(L, 9);
+	CF_Pixel* pixels = noise_fbm_pixels_wrapped(w, h, seed, scale, lacunarity, octaves, falloff, time, time_amplitude);
+	int* pix = (int*)pixels;
+	lua_newtable(L);
+	REF_LuaSetArray(L, pix, w * h);
+	cf_free(pix);
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_noise_fbm_pixels_wrapped);
 
 // -------------------------------------------------------------------------------------------------
 // Rnd
