@@ -11,8 +11,8 @@ vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
 {
 	float d = texture(tex, screen_uv).x;
 	d = d > 0.5 ? 1.0 : 0.0;
-	return vec4(vec3(d), 1);
+	return vec4(vec2(screen_uv.xy), d, 1);
 }
 @end
 
-@include include/draw.glsl
+@include ../build_msvc_2022/_deps/cute-src/include/shaders/draw.glsl

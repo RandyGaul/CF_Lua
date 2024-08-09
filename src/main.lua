@@ -18,6 +18,9 @@ function main()
 		draw_scale(scale, scale)
 		t = t + DELTA_TIME
 
+		draw_push()
+		draw_scale(1,-1)
+
 		rnd = rnd_seed(0)
 		for i=1,100 do
 			local o = rnd_range_float(rnd, -10,10)
@@ -37,6 +40,9 @@ function main()
 		render_settings_pop_shader()
 
 		canvas_blit(meta, 0, 0, 1, 1, app_get_canvas(), 0, 0, 1, 1)
+
+		draw_text("hello world", 0,0, -1)
+
 		app_draw_onto_screen(false)
 	end
 	destroy_app()

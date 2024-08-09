@@ -17,4 +17,4 @@ vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
 }
 @end
 
-@include include/draw.glsl
+@include ../build_msvc_2022/_deps/cute-src/include/shaders/draw.glsl
