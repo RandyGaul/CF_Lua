@@ -713,6 +713,7 @@ REF_FUNCTION(fs_get_actual_path);
 CF_HAPTIC_TYPE_DEFS
 CF_HAPTIC_WAVE_TYPE_DEFS
 
+REF_HANDLE_TYPE(CF_Haptic);
 REF_HANDLE_TYPE(CF_HapticEffect);
 
 REF_STRUCT(CF_HapticEnvelope,
@@ -883,6 +884,8 @@ CF_JOYPAD_POWER_LEVEL_DEFS
 CF_JOYPAD_BUTTON_DEFS
 CF_JOYPAD_AXIS_DEFS
 
+REF_HANDLE_TYPE(CF_Joypad);
+
 REF_FUNCTION(joypad_add_mapping);
 REF_FUNCTION(joypad_count);
 REF_FUNCTION(joypad_open);
@@ -890,9 +893,15 @@ REF_FUNCTION(joypad_close);
 REF_FUNCTION(joypad_is_connected);
 REF_FUNCTION(joypad_power_level);
 REF_FUNCTION(joypad_name);
+REF_FUNCTION(joypad_type);
+REF_FUNCTION(joypad_vendor);
+REF_FUNCTION(joypad_product_id);
+REF_FUNCTION(joypad_serial_number);
+REF_FUNCTION(joypad_firmware_version);
+REF_FUNCTION(joypad_product_version);
 REF_FUNCTION(joypad_button_down);
-REF_FUNCTION(joypad_button_was_pressed);
-REF_FUNCTION(joypad_button_was_released);
+REF_FUNCTION(joypad_button_just_pressed);
+REF_FUNCTION(joypad_button_just_released);
 REF_FUNCTION(joypad_axis);
 
 // -------------------------------------------------------------------------------------------------
