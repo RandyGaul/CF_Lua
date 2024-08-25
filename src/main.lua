@@ -48,14 +48,6 @@ function main()
 		render_to(app_get_canvas(), true)
 		render_settings_pop_shader()
 
-		draw_push()
-		draw_scale(0.25,1)
-		draw_rotate(t*0.3)
-		local text = "hello world"
-		draw_text(text, -text_width(text, -1)*0.5, 0, -1)
-		draw_pop()
-		canvas_blit(meta, 0, 0, 1, 1, app_get_canvas(), 0, 0, 1, 1)
-
 		app_draw_onto_screen(false)
 	end
 	destroy_app()

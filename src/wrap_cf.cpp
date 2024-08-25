@@ -20,8 +20,6 @@ REF_FUNCTION(message_box);
 REF_OPAQUE_PTR_TYPE(ImGuiContext);
 REF_OPAQUE_PTR_TYPE(CF_Sprite);
 REF_OPAQUE_PTR_TYPE(CF_File);
-REF_HANDLE_TYPE(CF_Joypad);
-REF_HANDLE_TYPE(CF_Haptic);
 
 // -------------------------------------------------------------------------------------------------
 // Math
