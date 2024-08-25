@@ -20,8 +20,8 @@ REF_FUNCTION(message_box);
 REF_OPAQUE_PTR_TYPE(ImGuiContext);
 REF_OPAQUE_PTR_TYPE(CF_Sprite);
 REF_OPAQUE_PTR_TYPE(CF_File);
-REF_OPAQUE_PTR_TYPE(CF_Joypad);
-REF_OPAQUE_PTR_TYPE(CF_Haptic);
+REF_HANDLE_TYPE(CF_Joypad);
+REF_HANDLE_TYPE(CF_Haptic);
 
 // -------------------------------------------------------------------------------------------------
 // Math
@@ -102,20 +102,16 @@ REF_FUNCTION(ortho_2d);
 // Graphics
 
 CF_BACKEND_TYPE_DEFS
-CF_PIXELFORMAT_DEFS
+CF_PIXEL_FORMAT_DEFS
 CF_PIXELFORMAT_OP_DEFS
-CF_DEVICE_FEATURE_DEFS
-CF_RESOURCE_LIMIT_DEFS
-CF_USAGE_TYPE_DEFS
 CF_FILTER_DEFS
 CF_WRAP_MODE_DEFS
 CF_VERTEX_FORMAT_DEFS
-CF_ATTRIBUTE_STEP_DEFS
 CF_CULL_MODE_DEFS
 CF_COMPARE_FUNCTION_DEFS
 CF_STENCIL_OP_DEFS
 CF_BLEND_OP_DEFS
-CF_BLEND_FACTOR_DEFS
+CF_BLENDFACTOR_DEFS
 CF_UNIFORM_TYPE_DEFS
 
 REF_HANDLE_TYPE(CF_Texture);
@@ -132,13 +128,12 @@ REF_STRUCT(CF_TextureParams,
 	REF_MEMBER(wrap_v),
 	REF_MEMBER(width),
 	REF_MEMBER(height),
-	REF_MEMBER(render_target),
-	REF_MEMBER(initial_data_size),
-	REF_MEMBER(initial_data),
+	REF_MEMBER(stream),
 );
 
 REF_STRUCT(CF_CanvasParams,
 	REF_MEMBER(target),
+	REF_MEMBER(depth_stencil_enable),
 	REF_MEMBER(depth_stencil_target),
 );
 
@@ -146,7 +141,6 @@ REF_STRUCT(CF_VertexAttribute,
 	REF_MEMBER(name),
 	REF_MEMBER(format),
 	REF_MEMBER(offset),
-	REF_MEMBER(step_type),
 );
 
 REF_STRUCT(CF_StencilFunction,
@@ -189,35 +183,38 @@ REF_STRUCT(CF_RenderState,
 );
 
 REF_FUNCTION(query_backend);
-REF_FUNCTION(query_pixel_format);
-REF_FUNCTION(query_device_feature);
-REF_FUNCTION(query_resource_limit);
 REF_FUNCTION(texture_defaults);
 REF_FUNCTION(make_texture);
 REF_FUNCTION(destroy_texture);
-REF_FUNCTION(update_texture);
-// make_shader manually bindings below.
+REF_FUNCTION(texture_update);
+REF_FUNCTION(make_shader);
+REF_FUNCTION(shader_directory);
+REF_FUNCTION(make_shader_from_source);
+void wrap_shader_on_changed_callback(const char* path, void* udata)
+{
+	const char* lua_fn_name = (const char*)udata;
+	REF_CallLuaFunction(L, lua_fn_name, { }, path);
+}
+void wrap_shader_on_changed(const char* lua_fn_name)
+{
+	shader_on_changed(wrap_shader_on_changed_callback, (void*)lua_fn_name);
+}
+REF_FUNCTION_EX(shader_on_changed, wrap_shader_on_changed);
+// @TODO compile_shader_to_bytecode
+// @TODO make_shader_from_bytecode
 REF_FUNCTION(destroy_shader);
 REF_FUNCTION(canvas_defaults);
 REF_FUNCTION(make_canvas);
 REF_FUNCTION(destroy_canvas);
 REF_FUNCTION(canvas_get_target);
 REF_FUNCTION(canvas_get_depth_stencil_target);
-REF_FUNCTION(canvas_get_backend_target_handle);
-REF_FUNCTION(canvas_get_backend_depth_stencil_handle);
 REF_FUNCTION(canvas_blit);
 REF_FUNCTION(make_mesh);
 REF_FUNCTION(destroy_mesh);
 REF_FUNCTION(mesh_set_attributes);
 REF_FUNCTION(mesh_update_vertex_data);
-REF_FUNCTION(mesh_append_vertex_data);
-REF_FUNCTION(mesh_will_overflow_vertex_data);
-REF_FUNCTION(mesh_update_instance_data);
-REF_FUNCTION(mesh_append_instance_data);
-REF_FUNCTION(mesh_will_overflow_instance_data);
-REF_FUNCTION(mesh_update_index_data);
-REF_FUNCTION(mesh_append_index_data);
-REF_FUNCTION(mesh_will_overflow_index_data);
+//REF_FUNCTION(mesh_update_instance_data);
+//REF_FUNCTION(mesh_update_index_data);
 REF_FUNCTION(render_state_defaults);
 REF_FUNCTION(make_material);
 REF_FUNCTION(destroy_material);
@@ -234,7 +231,7 @@ REF_FUNCTION(apply_scissor);
 REF_FUNCTION(apply_mesh);
 REF_FUNCTION(apply_shader);
 REF_FUNCTION(draw_elements);
-REF_FUNCTION(unapply_canvas);
+REF_FUNCTION(commit);
 REF_FUNCTION_EX(clear_color, cf_clear_color);
 
 // -------------------------------------------------------------------------------------------------
@@ -271,6 +268,7 @@ v2 wrap_app_get_size() { int x, y; app_get_size(&x, &y); return V2((float)x, (fl
 REF_FUNCTION_EX(app_get_size, wrap_app_get_size);
 REF_FUNCTION(app_get_dpi_scale);
 REF_FUNCTION(app_dpi_scaled_was_changed);
+REF_FUNCTION(cf_app_center_window);
 REF_FUNCTION(app_was_resized);
 REF_FUNCTION(app_was_moved);
 REF_FUNCTION(app_lost_focus);
@@ -452,9 +450,6 @@ REF_FUNCTION(draw_peek_layer);
 REF_FUNCTION(draw_push_color);
 REF_FUNCTION(draw_pop_color);
 REF_FUNCTION(draw_peek_color);
-REF_FUNCTION(draw_push_tint);
-REF_FUNCTION(draw_pop_tint);
-REF_FUNCTION(draw_peek_tint);
 REF_FUNCTION(draw_push_antialias);
 REF_FUNCTION(draw_pop_antialias);
 REF_FUNCTION(draw_peek_antialias);
@@ -550,16 +545,19 @@ REF_FUNCTION(render_settings_peek_scissor);
 REF_FUNCTION(render_settings_push_render_state);
 REF_FUNCTION(render_settings_pop_render_state);
 REF_FUNCTION(render_settings_peek_render_state);
+REF_FUNCTION(render_settings_set_atlas_dimensions);
+REF_FUNCTION(make_draw_shader);
+REF_FUNCTION(make_draw_shader_from_source);
 REF_FUNCTION(render_settings_push_shader);
 REF_FUNCTION(render_settings_pop_shader);
 REF_FUNCTION(render_settings_peek_shader);
 REF_FUNCTION(render_settings_push_texture);
 
-REF_FUNCTION(cf_render_settings_push_uniform);
-REF_FUNCTION_EX(render_settings_push_uniform_int, cf_render_settings_push_uniform_int);
-REF_FUNCTION_EX(render_settings_push_uniform_float, cf_render_settings_push_uniform_float);
-REF_FUNCTION_EX(render_settings_push_uniform_v2, cf_render_settings_push_uniform_v2);
-REF_FUNCTION_EX(render_settings_push_uniform_color, cf_render_settings_push_uniform_color);
+REF_FUNCTION(cf_render_settings_set_uniform);
+REF_FUNCTION_EX(render_settings_set_uniform_int,   cf_render_settings_set_uniform_int);
+REF_FUNCTION_EX(render_settings_set_uniform_float, cf_render_settings_set_uniform_float);
+REF_FUNCTION_EX(render_settings_set_uniform_v2,    cf_render_settings_set_uniform_v2);
+REF_FUNCTION_EX(render_settings_set_uniform_color, cf_render_settings_set_uniform_color);
 
 REF_FUNCTION_EX(draw_scale, cf_draw_scale);
 REF_FUNCTION_EX(draw_translate, cf_draw_translate);
@@ -891,8 +889,8 @@ REF_FUNCTION(joypad_is_connected);
 REF_FUNCTION(joypad_power_level);
 REF_FUNCTION(joypad_name);
 REF_FUNCTION(joypad_button_down);
-REF_FUNCTION(joypad_button_was_pressed);
-REF_FUNCTION(joypad_button_was_released);
+REF_FUNCTION(joypad_button_just_pressed);
+REF_FUNCTION(joypad_button_just_released);
 REF_FUNCTION(joypad_axis);
 
 // -------------------------------------------------------------------------------------------------

@@ -333,6 +333,8 @@ struct REF_TypeGetter
 	}
 };
 
+const REF_Type* REF_GetIntType();
+
 // Treat all enums as int.
 template<typename T>
 struct REF_TypeGetter<T, typename std::enable_if<std::is_enum<T>::value>::type>
@@ -340,8 +342,7 @@ struct REF_TypeGetter<T, typename std::enable_if<std::is_enum<T>::value>::type>
 	static const REF_Type* get()
 	{
 		static_assert(sizeof(T) == 4, "Assumed enums are 4-bytes.");
-		static const REF_Type* type = &g_int_Type;
-		return type;
+		return REF_GetIntType();
 	}
 };
 
@@ -447,6 +448,11 @@ REF_NUMERIC_TYPE(uint32_t);
 //REF_NUMERIC_TYPE(int32_t); // Just a typedef of int.
 REF_NUMERIC_TYPE(uint64_t);
 REF_NUMERIC_TYPE(int64_t);
+
+const REF_Type* REF_GetIntType()
+{
+	return &g_int_Type;
+}
 
 #define REF_PTR_TYPE(T) \
 	struct T##_Ptr_Type : public REF_Type \
@@ -618,7 +624,7 @@ void REF_LuaSetArray(lua_State* L, void* v, const REF_Type* type, int count)
 template <typename T>
 void REF_LuaSetArray(lua_State* L, T* items, int count)
 {
-	REF_LuaSetArray(L, (void*)items, REF_GetType<std::remove_const<T>::type>(), count);
+	REF_LuaSetArray(L, (void*)items, REF_GetType<typename std::remove_const<T>::type>(), count);
 }
 
 // Describes a data member of a struct.

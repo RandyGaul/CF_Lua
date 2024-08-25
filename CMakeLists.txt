@@ -1,12 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(CF_Lua)
 
-# Must have at least C++17.
-set(CMAKE_CXX_STANDARD 17)
-
-if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
-	set(EMSCRIPTEN TRUE)
-endif()
+set(CMAKE_CXX_STANDARD 20)
 
 # Make sure all binaries are placed into the same build folder.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -23,7 +18,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(cute)
 FetchContent_Declare(
 	box2d
-	GIT_REPOSITORY https://github.com/erincatto/box2c
+	GIT_REPOSITORY https://github.com/erincatto/box2d
 	GIT_TAG main
 )
 FetchContent_MakeAvailable(box2d)
@@ -43,12 +38,6 @@ add_executable(
 target_include_directories(CF_Lua PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
 target_include_directories(CF_Lua PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lua>)
 target_include_directories(CF_Lua PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/shaders>)
-
-if(EMSCRIPTEN)
-	set(CMAKE_EXECUTABLE_SUFFIX ".html")
-	target_compile_options(CF_Lua PUBLIC -O1 -fno-rtti -fno-exceptions)
-	target_link_options(CF_Lua PRIVATE -o CF_Lua.html --preload-file ${CMAKE_SOURCE_DIR}/content@/content --emrun -s ASYNCIFY=1 -O1)
-endif()
 
 target_link_libraries(CF_Lua cute)
 target_link_libraries(CF_Lua Lua)
