@@ -207,10 +207,10 @@ REF_FUNCTION(destroy_canvas);
 REF_FUNCTION(canvas_get_target);
 REF_FUNCTION(canvas_get_depth_stencil_target);
 REF_FUNCTION(canvas_blit);
-REF_FUNCTION(make_mesh);
+REF_FUNCTION(make_mesh, {1, 2});
 REF_FUNCTION(destroy_mesh);
-REF_FUNCTION(mesh_set_attributes);
-REF_FUNCTION(mesh_update_vertex_data);
+// @TODO These need manual serializers.
+//REF_FUNCTION(mesh_update_vertex_data);
 //REF_FUNCTION(mesh_update_instance_data);
 //REF_FUNCTION(mesh_update_index_data);
 REF_FUNCTION(render_state_defaults);
@@ -239,7 +239,17 @@ CF_APP_OPTION_DEFS
 CF_POWER_STATE_DEFS
 CF_DISPLAY_ORIENTATION_DEFS
 
+REF_FUNCTION(default_display);
 REF_FUNCTION(display_count);
+int wrap_get_display_list(lua_State* L)
+{
+	int count = display_count();
+	CF_DisplayID* ids = get_display_list();
+	REF_LuaSetArray(L, ids, count);
+	free_display_list(ids);
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_get_display_list);
 REF_FUNCTION(display_x);
 REF_FUNCTION(display_y);
 REF_FUNCTION(display_width);
@@ -266,7 +276,7 @@ v2 wrap_app_get_size() { int x, y; app_get_size(&x, &y); return V2((float)x, (fl
 REF_FUNCTION_EX(app_get_size, wrap_app_get_size);
 REF_FUNCTION(app_get_dpi_scale);
 REF_FUNCTION(app_dpi_scaled_was_changed);
-REF_FUNCTION(cf_app_center_window);
+REF_FUNCTION(app_center_window);
 REF_FUNCTION(app_was_resized);
 REF_FUNCTION(app_was_moved);
 REF_FUNCTION(app_lost_focus);

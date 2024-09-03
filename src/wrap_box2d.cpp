@@ -43,7 +43,7 @@ REF_STRUCT(b2Polygon,
 	REF_MEMBER(radius),
 );
 
-REF_STRUCT(b2SmoothSegment,
+REF_STRUCT(b2ChainSegment,
 	REF_MEMBER(ghost1),
 	REF_MEMBER(segment),
 	REF_MEMBER(ghost2),
@@ -77,8 +77,9 @@ REF_STRUCT(b2WorldDef,
 	REF_MEMBER(contactDampingRatio),
 	REF_MEMBER(jointHertz),
 	REF_MEMBER(jointDampingRatio),
+	REF_MEMBER(maximumLinearVelocity),
 	REF_MEMBER(enableSleep),
-	REF_MEMBER(enableContinous),
+	REF_MEMBER(enableContinuous),
 	REF_MEMBER(workerCount),
 	//REF_MEMBER(enqueueTask),
 	//REF_MEMBER(finishTask),
@@ -565,7 +566,7 @@ REF_FUNCTION(b2Body_ApplyLinearImpulse);
 REF_FUNCTION(b2Body_ApplyLinearImpulseToCenter);
 REF_FUNCTION(b2Body_ApplyAngularImpulse);
 REF_FUNCTION(b2Body_GetMass);
-REF_FUNCTION(b2Body_GetInertiaTensor);
+REF_FUNCTION(b2Body_GetRotationalInertia);
 REF_FUNCTION(b2Body_GetLocalCenterOfMass);
 REF_FUNCTION(b2Body_GetWorldCenterOfMass);
 REF_FUNCTION(b2Body_SetMassData);
@@ -635,7 +636,7 @@ REF_FUNCTION(b2Shape_TestPoint);
 REF_FUNCTION(b2Shape_RayCast);
 REF_FUNCTION(b2Shape_GetCircle);
 REF_FUNCTION(b2Shape_GetSegment);
-REF_FUNCTION(b2Shape_GetSmoothSegment);
+REF_FUNCTION(b2Shape_GetChainSegment);
 REF_FUNCTION(b2Shape_GetCapsule);
 REF_FUNCTION(b2Shape_GetPolygon);
 
@@ -690,10 +691,10 @@ REF_FUNCTION(b2DistanceJoint_EnableSpring);
 REF_FUNCTION(b2DistanceJoint_IsSpringEnabled);
 REF_FUNCTION(b2DistanceJoint_SetSpringHertz);
 REF_FUNCTION(b2DistanceJoint_SetSpringDampingRatio);
-REF_FUNCTION(b2DistanceJoint_GetHertz);
-REF_FUNCTION(b2DistanceJoint_GetDampingRatio);
+REF_FUNCTION(b2DistanceJoint_GetSpringHertz);
+REF_FUNCTION(b2DistanceJoint_GetSpringDampingRatio);
 REF_FUNCTION(b2DistanceJoint_EnableLimit);
-//REF_FUNCTION(b2DistanceJoint_IsLimitEnabled);
+REF_FUNCTION(b2DistanceJoint_IsLimitEnabled);
 REF_FUNCTION(b2DistanceJoint_SetLengthRange);
 REF_FUNCTION(b2DistanceJoint_GetMinLength);
 REF_FUNCTION(b2DistanceJoint_GetMaxLength);
@@ -882,16 +883,15 @@ b2Manifold wrap_b2CollidePolygons(b2Polygon a, b2Transform xa, b2Polygon b, b2Tr
 REF_FUNCTION_EX(b2CollidePolygons, wrap_b2CollidePolygons);
 b2Manifold wrap_b2CollideSegmentAndPolygon(b2Segment a, b2Transform xa, b2Polygon b, b2Transform xb) { return b2CollideSegmentAndPolygon(&a, xa, &b, xb); }
 REF_FUNCTION_EX(b2CollideSegmentAndPolygon, wrap_b2CollideSegmentAndPolygon);
-b2Manifold wrap_b2CollideSmoothSegmentAndCircle(b2SmoothSegment a, b2Transform xa, b2Circle b, b2Transform xb) { return b2CollideSmoothSegmentAndCircle(&a, xa, &b, xb); }
+b2Manifold wrap_b2CollideSmoothSegmentAndCircle(b2ChainSegment a, b2Transform xa, b2Circle b, b2Transform xb) { return b2CollideChainSegmentAndCircle(&a, xa, &b, xb); }
 REF_FUNCTION_EX(b2CollideSmoothSegmentAndCircle, wrap_b2CollideSmoothSegmentAndCircle);
-b2Manifold wrap_b2CollideSmoothSegmentAndCapsule(b2SmoothSegment a, b2Transform xa, b2Capsule b, b2Transform xb) { b2DistanceCache c = { 0 }; return b2CollideSmoothSegmentAndCapsule(&a, xa, &b, xb, &c); }
+b2Manifold wrap_b2CollideSmoothSegmentAndCapsule(b2ChainSegment a, b2Transform xa, b2Capsule b, b2Transform xb) { b2DistanceCache c = { 0 }; return b2CollideChainSegmentAndCapsule(&a, xa, &b, xb, &c); }
 REF_FUNCTION_EX(b2CollideSmoothSegmentAndCapsule, wrap_b2CollideSmoothSegmentAndCapsule);
-b2Manifold wrap_b2CollideSmoothSegmentAndPolygon(b2SmoothSegment a, b2Transform xa, b2Polygon b, b2Transform xb) { b2DistanceCache c = { 0 }; return b2CollideSmoothSegmentAndPolygon(&a, xa, &b, xb, &c); }
+b2Manifold wrap_b2CollideSmoothSegmentAndPolygon(b2ChainSegment a, b2Transform xa, b2Polygon b, b2Transform xb) { b2DistanceCache c = { 0 }; return b2CollideChainSegmentAndPolygon(&a, xa, &b, xb, &c); }
 REF_FUNCTION_EX(b2CollideSmoothSegmentAndPolygon, wrap_b2CollideSmoothSegmentAndPolygon);
 
 REF_CONSTANT(b2_colorAliceBlue);
 REF_CONSTANT(b2_colorAntiqueWhite);
-REF_CONSTANT(b2_colorAqua);
 REF_CONSTANT(b2_colorAquamarine);
 REF_CONSTANT(b2_colorAzure);
 REF_CONSTANT(b2_colorBeige);
@@ -934,7 +934,6 @@ REF_CONSTANT(b2_colorDodgerBlue);
 REF_CONSTANT(b2_colorFirebrick);
 REF_CONSTANT(b2_colorFloralWhite);
 REF_CONSTANT(b2_colorForestGreen);
-REF_CONSTANT(b2_colorFuchsia);
 REF_CONSTANT(b2_colorGainsboro);
 REF_CONSTANT(b2_colorGhostWhite);
 REF_CONSTANT(b2_colorGold);
@@ -976,7 +975,6 @@ REF_CONSTANT(b2_colorLightSlateBlue);
 REF_CONSTANT(b2_colorLightSlateGray);
 REF_CONSTANT(b2_colorLightSteelBlue);
 REF_CONSTANT(b2_colorLightYellow);
-REF_CONSTANT(b2_colorLime);
 REF_CONSTANT(b2_colorLimeGreen);
 REF_CONSTANT(b2_colorLinen);
 REF_CONSTANT(b2_colorMagenta);
@@ -995,7 +993,6 @@ REF_CONSTANT(b2_colorMintCream);
 REF_CONSTANT(b2_colorMistyRose);
 REF_CONSTANT(b2_colorMoccasin);
 REF_CONSTANT(b2_colorNavajoWhite);
-REF_CONSTANT(b2_colorNavy);
 REF_CONSTANT(b2_colorNavyBlue);
 REF_CONSTANT(b2_colorOldLace);
 REF_CONSTANT(b2_colorOlive);
@@ -1043,6 +1040,10 @@ REF_CONSTANT(b2_colorWhite);
 REF_CONSTANT(b2_colorWhiteSmoke);
 REF_CONSTANT(b2_colorYellow);
 REF_CONSTANT(b2_colorYellowGreen);
+REF_CONSTANT(b2_colorBox2DRed);
+REF_CONSTANT(b2_colorBox2DBlue);
+REF_CONSTANT(b2_colorBox2DGreen);
+REF_CONSTANT(b2_colorBox2DYellow);
 
 struct b2DebugDrawSettings
 {
