@@ -72,8 +72,8 @@ int main(int argc, char* argv[])
 	luaL_openlibs(L);
 	REF_BindLua(L);
 
-	if (luaL_dofile(L, "../../src/main.lua")) {
-	//if (luaL_dofile(L, "main.lua")) {
+	const char* path_to_main_lua = argc < 2 ? "../../src/main.lua" : argv[1];
+	if (luaL_dofile(L, path_to_main_lua)) {
 		fprintf(stderr, lua_tostring(L, -1));
 		return -1;
 	}

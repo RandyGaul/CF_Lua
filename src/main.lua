@@ -17,8 +17,10 @@ function rectangle(x, y, w, h, rs, color, line_width)
   if color then draw_pop_color() end
 end
 
-function draw_image(canvas, image, x, y, r, sx, sy, color)
+-- "Simplest" fix, but rather innefficient.
+function draw_image_inefficient(canvas, image, x, y, r, sx, sy, color)
   if color then
+    render_to(canvas, false)
     render_settings_push_shader(shader)
     draw_push_vertex_attributes(color.r, color.g, color.b, color.a)
   end
@@ -34,6 +36,23 @@ function draw_image(canvas, image, x, y, r, sx, sy, color)
   end
 end
 
+-- Avoid swapping shaders, more efficient.
+function draw_image_suggested(canvas, image, x, y, r, sx, sy, color)
+  if color then
+    draw_push_vertex_attributes(color.r, color.g, color.b, color.a)
+  end
+  sprite_set_offset_x(image, x)
+  sprite_set_offset_y(image, y)
+  push(x, y, r, sx, sy)
+    draw_sprite(image)
+  pop()
+  if color then
+    draw_pop_vertex_attributes()
+  end
+end
+
+draw_image = draw_image_suggested
+
 function push(x, y, r, sx, sy)
   draw_push()
   draw_translate(x or 0, y or 0)
@@ -47,16 +66,17 @@ function pop()
 end
 
 function main()
+  mount_directory_as('/content', '/')
   app_set_title('Test')
   app_set_size(w*sx, h*sy)
   app_set_canvas_size(w*sx, h*sy)
   display_width, display_height = display_width(default_display()), display_height(default_display())
   app_center_window()
 
-  hit_effect_2 = make_easy_sprite('assets/hit_effect_2.png')
+  hit_effect_2 = make_easy_sprite('hit_effect_2.png')
   shader = make_draw_shader_from_source([[
     vec4 shader(vec4 color, vec2 pos, vec2 atlas_us, vec2 screen_uv, vec4 params) {
-      return vec4(params.rgb, color.a);
+      return params.a == 0 ? color : vec4(params.rgb, color.a);
     }
   ]])
 
@@ -81,6 +101,8 @@ function main()
     draw_push()
     draw_translate(-480/2, 270/2)
     draw_scale(1, -1)
+    draw_push_vertex_attributes(0,0,0,0)
+    render_settings_push_shader(shader)
 
     rectangle(w/2, h/2, 300, 200, 0, white)
     rectangle(w/2 - 80, h/2, 40, 10, 0, red)
@@ -89,12 +111,23 @@ function main()
       draw_image(canvas, hit_effect_2, w/2, h/2, 0, 1, 1, blue)
     end
 
+	if key_just_pressed(KEY_SPACE) then
+		if draw_image == draw_image_suggested then
+			print("Using draw_image_inefficient.")
+			draw_image = draw_image_inefficient
+		else
+			print("Using draw_image_suggested.")
+			draw_image = draw_image_suggested
+		end
+	end
+
     draw_pop_antialias()
     draw_pop()
 
     canvas_blit(canvas, 0, 0, 1, 1, screen_canvas, 0, 0, 1, 1)
     canvas_blit(screen_canvas, 0, 0, 1, 1, app_get_canvas(), 0, 0, 1, 1)
-    app_draw_onto_screen(false)
+    local draw_call_count = app_draw_onto_screen(false)
+	print(draw_call_count)
   end
   destroy_app()
 end

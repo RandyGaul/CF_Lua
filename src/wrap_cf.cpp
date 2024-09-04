@@ -561,7 +561,6 @@ REF_FUNCTION(render_settings_pop_shader);
 REF_FUNCTION(render_settings_peek_shader);
 REF_FUNCTION(render_settings_push_texture);
 
-REF_FUNCTION(cf_render_settings_set_uniform);
 REF_FUNCTION_EX(render_settings_set_uniform_int,   cf_render_settings_set_uniform_int);
 REF_FUNCTION_EX(render_settings_set_uniform_float, cf_render_settings_set_uniform_float);
 REF_FUNCTION_EX(render_settings_set_uniform_v2,    cf_render_settings_set_uniform_v2);
