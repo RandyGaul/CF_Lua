@@ -67,6 +67,10 @@ end
 
 function main()
   mount_directory_as('/content', '/')
+	print(fs_file_exists("/player.ase"))
+	local s = fs_read_entire_file_to_memory("/player.ase")
+	print(s)
+  make_sprite("player.ase")
   app_set_title('Test')
   app_set_size(w*sx, h*sy)
   app_set_canvas_size(w*sx, h*sy)

@@ -39,6 +39,7 @@ REF_FLAT_FLOATS(CF_Ray);
 REF_FLAT_FLOATS(CF_Halfspace);
 REF_FLAT_FLOATS(CF_SinCos);
 REF_FLAT_FLOATS(CF_Transform);
+REF_FLAT_FLOATS(CF_ToiResult);
 
 REF_STRUCT(CF_Poly,
 	REF_MEMBER_ARRAY(verts, count),
@@ -95,6 +96,40 @@ REF_FUNCTION(capsule_to_poly_manifold);
 REF_FUNCTION(poly_to_poly_manifold);
 
 REF_FUNCTION(ortho_2d);
+
+// @TODO Move these into CF?
+CF_Raycast cast_ray_to_circle(CF_Ray A, CF_Circle B) { CF_Raycast cast; cast_ray(A, &B, NULL, SHAPE_TYPE_CIRCLE, &cast); return cast; }
+CF_Raycast cast_ray_to_aabb(CF_Ray A, CF_Aabb B) { CF_Raycast cast; cast_ray(A, &B, NULL, SHAPE_TYPE_AABB, &cast); return cast; }
+CF_Raycast cast_ray_to_capsule(CF_Ray A, CF_Capsule B) { CF_Raycast cast; cast_ray(A, &B, NULL, SHAPE_TYPE_CAPSULE, &cast); return cast; }
+CF_Raycast cast_ray_to_poly(CF_Ray A, CF_Poly B) { CF_Raycast cast; cast_ray(A, &B, NULL, SHAPE_TYPE_POLY, &cast); return cast; }
+REF_FUNCTION(cast_ray_to_circle);
+REF_FUNCTION(cast_ray_to_aabb);
+REF_FUNCTION(cast_ray_to_capsule);
+REF_FUNCTION(cast_ray_to_poly);
+REF_FUNCTION(impact);
+REF_FUNCTION(endpoint);
+
+// @TODO Move these into CF?
+CF_ToiResult cast_circle_to_circle(CF_Circle A, CF_V2 vA, CF_Circle B, CF_V2 vB, bool use_radius) { return toi(&A, SHAPE_TYPE_CIRCLE, NULL, vA, &B, SHAPE_TYPE_CIRCLE, NULL, vB, (int)use_radius); }
+CF_ToiResult cast_circle_to_aabb(CF_Circle A, CF_V2 vA, CF_Aabb B, CF_V2 vB, bool use_radius) { return toi(&A, SHAPE_TYPE_CIRCLE, NULL, vA, &B, SHAPE_TYPE_AABB, NULL, vB, (int)use_radius); }
+CF_ToiResult cast_circle_to_capsule(CF_Circle A, CF_V2 vA, CF_Capsule B, CF_V2 vB, bool use_radius) { return toi(&A, SHAPE_TYPE_CIRCLE, NULL, vA, &B, SHAPE_TYPE_CAPSULE, NULL, vB, (int)use_radius); }
+CF_ToiResult cast_circle_to_poly(CF_Circle A, CF_V2 vA, CF_Poly B, CF_V2 vB, bool use_radius) { return toi(&A, SHAPE_TYPE_CIRCLE, NULL, vA, &B, SHAPE_TYPE_POLY, NULL, vB, (int)use_radius); }
+CF_ToiResult cast_aabb_to_aabb(CF_Aabb A, CF_V2 vA, CF_Aabb B, CF_V2 vB, bool use_radius) { return toi(&A, SHAPE_TYPE_AABB, NULL, vA, &B, SHAPE_TYPE_AABB, NULL, vB, (int)use_radius); }
+CF_ToiResult cast_aabb_to_capsule(CF_Aabb A, CF_V2 vA, CF_Capsule B, CF_V2 vB, bool use_radius) { return toi(&A, SHAPE_TYPE_AABB, NULL, vA, &B, SHAPE_TYPE_CAPSULE, NULL, vB, (int)use_radius); }
+CF_ToiResult cast_aabb_to_poly(CF_Aabb A, CF_V2 vA, CF_Poly B, CF_V2 vB, bool use_radius) { return toi(&A, SHAPE_TYPE_AABB, NULL, vA, &B, SHAPE_TYPE_POLY, NULL, vB, (int)use_radius); }
+CF_ToiResult cast_capsule_to_capsule(CF_Capsule A, CF_V2 vA, CF_Capsule B, CF_V2 vB, bool use_radius) { return toi(&A, SHAPE_TYPE_CAPSULE, NULL, vA, &B, SHAPE_TYPE_CAPSULE, NULL, vB, (int)use_radius); }
+CF_ToiResult cast_capsule_to_poly(CF_Capsule A, CF_V2 vA, CF_Poly B, CF_V2 vB, bool use_radius) { return toi(&A, SHAPE_TYPE_CAPSULE, NULL, vA, &B, SHAPE_TYPE_POLY, NULL, vB, (int)use_radius); }
+CF_ToiResult cast_poly_to_poly(CF_Poly A, CF_V2 vA, CF_Poly B, CF_V2 vB, bool use_radius) { return toi(&A, SHAPE_TYPE_POLY, NULL, vA, &B, SHAPE_TYPE_POLY, NULL, vB, (int)use_radius); }
+REF_FUNCTION(cast_circle_to_circle);
+REF_FUNCTION(cast_circle_to_aabb);
+REF_FUNCTION(cast_circle_to_capsule);
+REF_FUNCTION(cast_circle_to_poly);
+REF_FUNCTION(cast_aabb_to_aabb);
+REF_FUNCTION(cast_aabb_to_capsule);
+REF_FUNCTION(cast_aabb_to_poly);
+REF_FUNCTION(cast_capsule_to_capsule);
+REF_FUNCTION(cast_capsule_to_poly);
+REF_FUNCTION(cast_poly_to_poly);
 
 // -------------------------------------------------------------------------------------------------
 // Graphics
