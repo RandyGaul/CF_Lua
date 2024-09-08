@@ -1,5 +1,9 @@
 # Lua Bindings for CF and Box2D
 
+This repo provides bindings to Lua for [CF](https://github.com/RandyGaul/cute_framework) and Box2D. An executable file is generated called `CF_Lua` (feel free to rename this to whatever you like). You pass in a path to your `main.lua` file as the only command line parameter. The executable will start up your Lua script and call the `main` function. From there it's just a matter of calling into CF functions from Lua. All of the functions/constants are bound in `wrap_cf.cpp`, and you may view all bound functions/constants by calling `dump_lua_api` from within Lua.
+
+# Special Cases
+
 Arrays - When calling a C function and passing arrays over to C, do *NOT* send in the length of the array. The array length gets automatically handled by the binding system.
 
 Callbacks - Passing callbacks to C is done by sending a *string of the function name* in Lua, not the function itself.
