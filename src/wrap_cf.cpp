@@ -1239,6 +1239,25 @@ REF_CONSTANT(ImGuiCond_Once);
 REF_CONSTANT(ImGuiCond_FirstUseEver);
 REF_CONSTANT(ImGuiCond_Appearing);
 
+REF_CONSTANT(ImGuiTreeNodeFlags_None);
+REF_CONSTANT(ImGuiTreeNodeFlags_Selected);
+REF_CONSTANT(ImGuiTreeNodeFlags_Framed);
+REF_CONSTANT(ImGuiTreeNodeFlags_AllowOverlap);
+REF_CONSTANT(ImGuiTreeNodeFlags_NoTreePushOnOpen);
+REF_CONSTANT(ImGuiTreeNodeFlags_NoAutoOpenOnLog);
+REF_CONSTANT(ImGuiTreeNodeFlags_DefaultOpen);
+REF_CONSTANT(ImGuiTreeNodeFlags_OpenOnDoubleClick);
+REF_CONSTANT(ImGuiTreeNodeFlags_OpenOnArrow);
+REF_CONSTANT(ImGuiTreeNodeFlags_Leaf);
+REF_CONSTANT(ImGuiTreeNodeFlags_Bullet);
+REF_CONSTANT(ImGuiTreeNodeFlags_FramePadding);
+REF_CONSTANT(ImGuiTreeNodeFlags_SpanAvailWidth);
+REF_CONSTANT(ImGuiTreeNodeFlags_SpanFullWidth);
+REF_CONSTANT(ImGuiTreeNodeFlags_SpanTextWidth);
+REF_CONSTANT(ImGuiTreeNodeFlags_SpanAllColumns);
+REF_CONSTANT(ImGuiTreeNodeFlags_NavLeftJumpsBackHere);
+REF_CONSTANT(ImGuiTreeNodeFlags_CollapsingHeader);
+
 void imgui_begin(const char* name) { ImGui::Begin(name); }
 REF_FUNCTION(imgui_begin);
 bool imgui_begin_ex(const char* name, bool opened, int flags) { ImGui::Begin(name, &opened, flags); return opened; }
@@ -1259,11 +1278,13 @@ int wrap_imgui_sprite_button(lua_State* L)
 	lua_pop(L, 2);
 	CF_TemporaryImage image = cf_fetch_image(s);
 	ImTextureID id = (ImTextureID)cf_texture_handle(image.tex);
-	ImVec2 size = { (float)image.w * s->scale.x, (float)image.h * s->scale.y };
+	ImVec2 size = { (float)image.w * s->scale.x + 2, (float)image.h * s->scale.y + 2 };
 	// y is flipped
 	ImVec2 uv0 = { image.u.x, image.v.y };
 	ImVec2 uv1 = { image.v.x, image.u.y };
-	return ImGui::ImageButton(name, id, size, uv0, uv1);
+	bool result = ImGui::ImageButton(name, id, size, uv0, uv1);
+	lua_pushboolean(L, result);
+	return 1;
 }
 REF_WRAP_MANUAL(wrap_imgui_sprite_button);
 bool imgui_color(const char* name, CF_Color color) { return ImGui::ColorPicker4(name, &color.r); }
@@ -1297,3 +1318,19 @@ bool imgui_menu_item(const char* name, const char* shortcut, bool opened) {
 	return opened;
 }
 REF_FUNCTION(imgui_menu_item);
+bool imgui_collapsing_header(const char* name) { return ImGui::CollapsingHeader(name, ImGuiTreeNodeFlags_None); }
+REF_FUNCTION(imgui_collapsing_header);
+bool imgui_collapsing_header_ex(const char* name, int flags) { return ImGui::CollapsingHeader(name, flags); }
+REF_FUNCTION(imgui_collapsing_header_ex);
+void imgui_same_line() { ImGui::SameLine(); }
+REF_FUNCTION(imgui_same_line);
+bool imgui_begin_combo(const char* name, const char* preview) { return ImGui::BeginCombo(name, preview); }
+REF_FUNCTION(imgui_begin_combo);
+void imgui_end_combo() { ImGui::EndCombo(); }
+REF_FUNCTION(imgui_end_combo);
+bool imgui_selectable(const char* name, bool is_selected) { return ImGui::Selectable(name, is_selected); }
+REF_FUNCTION(imgui_selectable);
+void imgui_set_item_default_focus() { ImGui::SetItemDefaultFocus(); }
+REF_FUNCTION(imgui_set_item_default_focus);
+void imgui_set_frame_rounding(float rounding) { ImGui::GetStyle().FrameRounding = rounding; }
+REF_FUNCTION(imgui_set_frame_rounding);
