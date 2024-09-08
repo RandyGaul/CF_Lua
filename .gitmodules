@@ -1,0 +1,3 @@
+[submodule "cute_framework"]
+	path = cute_framework
+	url = https://github.com/RandyGaul/cute_framework

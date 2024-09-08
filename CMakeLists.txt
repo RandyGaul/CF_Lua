@@ -10,12 +10,7 @@ set(CUTE_FRAMEWORK_STATIC ON)
 set(CF_FRAMEWORK_BUILD_SAMPLES OFF)
 set(CF_FRAMEWORK_BUILD_TESTS OFF)
 
-include(FetchContent)
-FetchContent_Declare(
-	cute
-	GIT_REPOSITORY https://github.com/RandyGaul/cute_framework
-)
-FetchContent_MakeAvailable(cute)
+add_subdirectory(cute_framework)
 FetchContent_Declare(
 	box2d
 	GIT_REPOSITORY https://github.com/erincatto/box2d
