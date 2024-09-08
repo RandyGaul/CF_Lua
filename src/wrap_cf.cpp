@@ -51,11 +51,20 @@ REF_STRUCT(CF_SliceOutput,
 	REF_MEMBER(back),
 );
 
+CF_Poly wrap_make_poly(CF_V2* pts, int count)
+{
+	CF_Poly poly;
+	poly.count = min(CF_POLY_MAX_VERTS, count);
+	CF_MEMCPY(poly.verts, pts, sizeof(CF_V2) * poly.count);
+	make_poly(&poly);
+	return poly;
+}
+REF_FUNCTION_EX(make_poly, wrap_make_poly, {0,1});
+
 REF_FUNCTION(ray_to_halfspace);
 REF_FUNCTION(center_of_mass);
 REF_FUNCTION(calc_area);
 REF_FUNCTION(slice);
-REF_FUNCTION(make_poly, {0,1});
 REF_FUNCTION(circle_to_circle);
 REF_FUNCTION(circle_to_aabb);
 REF_FUNCTION(circle_to_capsule);
@@ -1193,3 +1202,98 @@ int wrap_make_premade_sprite(lua_State* L)
 	return 1;
 }
 REF_WRAP_MANUAL(wrap_make_premade_sprite);
+
+// -------------------------------------------------------------------------------------------------
+// Dear ImGui bindings on an as-needed basis.
+
+#include <imgui.h>
+
+REF_CONSTANT(ImGuiWindowFlags_None);
+REF_CONSTANT(ImGuiWindowFlags_NoTitleBar);
+REF_CONSTANT(ImGuiWindowFlags_NoResize);
+REF_CONSTANT(ImGuiWindowFlags_NoMove);
+REF_CONSTANT(ImGuiWindowFlags_NoScrollbar);
+REF_CONSTANT(ImGuiWindowFlags_NoScrollWithMouse);
+REF_CONSTANT(ImGuiWindowFlags_NoCollapse);
+REF_CONSTANT(ImGuiWindowFlags_AlwaysAutoResize);
+REF_CONSTANT(ImGuiWindowFlags_NoBackground);
+REF_CONSTANT(ImGuiWindowFlags_NoSavedSettings);
+REF_CONSTANT(ImGuiWindowFlags_NoMouseInputs);
+REF_CONSTANT(ImGuiWindowFlags_MenuBar);
+REF_CONSTANT(ImGuiWindowFlags_HorizontalScrollbar);
+REF_CONSTANT(ImGuiWindowFlags_NoFocusOnAppearing);
+REF_CONSTANT(ImGuiWindowFlags_NoBringToFrontOnFocus);
+REF_CONSTANT(ImGuiWindowFlags_AlwaysVerticalScrollbar);
+REF_CONSTANT(ImGuiWindowFlags_AlwaysHorizontalScrollbar);
+REF_CONSTANT(ImGuiWindowFlags_NoNavInputs);
+REF_CONSTANT(ImGuiWindowFlags_NoNavFocus);
+REF_CONSTANT(ImGuiWindowFlags_UnsavedDocument);
+REF_CONSTANT(ImGuiWindowFlags_NoDocking);
+REF_CONSTANT(ImGuiWindowFlags_NoNav);
+REF_CONSTANT(ImGuiWindowFlags_NoDecoration);
+REF_CONSTANT(ImGuiWindowFlags_NoInputs);
+
+REF_CONSTANT(ImGuiCond_None);
+REF_CONSTANT(ImGuiCond_Always);
+REF_CONSTANT(ImGuiCond_Once);
+REF_CONSTANT(ImGuiCond_FirstUseEver);
+REF_CONSTANT(ImGuiCond_Appearing);
+
+void imgui_begin(const char* name) { ImGui::Begin(name); }
+REF_FUNCTION(imgui_begin);
+bool imgui_begin_ex(const char* name, bool opened, int flags) { ImGui::Begin(name, &opened, flags); return opened; }
+REF_FUNCTION(imgui_begin_ex);
+void imgui_end() { ImGui::End(); }
+REF_FUNCTION(imgui_end);
+bool imgui_button(const char* name) { return ImGui::Button(name); }
+REF_FUNCTION(imgui_button);
+void imgui_separator() { ImGui::Separator(); }
+REF_FUNCTION(imgui_separator);
+void imgui_separator_text(const char* text) { ImGui::SeparatorText(text); }
+REF_FUNCTION(imgui_separator_text);
+int wrap_imgui_sprite_button(lua_State* L)
+{
+	const char* name = lua_tostring(L, -2);
+	CF_Sprite* s;
+	REF_LuaGet(L, -1, &s);
+	lua_pop(L, 2);
+	CF_TemporaryImage image = cf_fetch_image(s);
+	ImTextureID id = (ImTextureID)cf_texture_handle(image.tex);
+	ImVec2 size = { (float)image.w * s->scale.x, (float)image.h * s->scale.y };
+	// y is flipped
+	ImVec2 uv0 = { image.u.x, image.v.y };
+	ImVec2 uv1 = { image.v.x, image.u.y };
+	return ImGui::ImageButton(name, id, size, uv0, uv1);
+}
+REF_WRAP_MANUAL(wrap_imgui_sprite_button);
+bool imgui_color(const char* name, CF_Color color) { return ImGui::ColorPicker4(name, &color.r); }
+REF_FUNCTION(imgui_color);
+bool imgui_checkbox(const char* name, bool opened) { ImGui::Checkbox(name, &opened); return opened; }
+REF_FUNCTION(imgui_checkbox);
+CF_V2 imgui_v2(const char* name, CF_V2 v, const char* fmt) { ImGui::InputFloat2(name, &v.x, fmt); return v; }
+REF_FUNCTION(imgui_v2);
+int imgui_int(const char* name, int i) { ImGui::InputInt(name, &i); return i; }
+REF_FUNCTION(imgui_int);
+float imgui_float(const char* name, float f) { ImGui::InputFloat(name, &f); return f; }
+REF_FUNCTION(imgui_float);
+void imgui_demo_window() { ImGui::ShowDemoWindow(); }
+REF_FUNCTION(imgui_demo_window);
+void imgui_dockspace_over_viewport() { ImGui::DockSpaceOverViewport(0, ImGui::GetWindowViewport(), ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_AutoHideTabBar); }
+REF_FUNCTION(imgui_dockspace_over_viewport);
+void imgui_begin_main_menu_bar() { ImGui::BeginMainMenuBar(); }
+REF_FUNCTION(imgui_begin_main_menu_bar);
+void imgui_end_main_menu_bar() { ImGui::EndMainMenuBar(); }
+REF_FUNCTION(imgui_end_main_menu_bar);
+bool imgui_is_window_docked() { return ImGui::IsWindowDocked(); }
+REF_FUNCTION(imgui_is_window_docked);
+void imgui_begin_menu(const char* name) { ImGui::BeginMenu(name); }
+REF_FUNCTION(imgui_begin_menu);
+void imgui_end_menu() { ImGui::EndMenu(); }
+REF_FUNCTION(imgui_end_menu);
+bool imgui_menu_item(const char* name, const char* shortcut, bool opened) {
+	if (ImGui::MenuItem(name, shortcut, opened)) {
+		opened = !opened;
+	}
+	return opened;
+}
+REF_FUNCTION(imgui_menu_item);
