@@ -1306,6 +1306,23 @@ int wrap_imgui_sprite_button(lua_State* L)
 	return 1;
 }
 REF_WRAP_MANUAL(wrap_imgui_sprite_button);
+int wrap_imgui_sprite(lua_State* L)
+{
+	CF_Sprite* s;
+	REF_LuaGet(L, -1, &s);
+	lua_pop(L, 1);
+	CF_TemporaryImage image = cf_fetch_image(s);
+	ImTextureID id = (ImTextureID)cf_texture_handle(image.tex);
+	ImVec2 size = { (float)image.w * s->scale.x, (float)image.h * s->scale.y };
+	// y is flipped
+	ImVec2 uv0 = { image.u.x, image.v.y };
+	ImVec2 uv1 = { image.v.x, image.u.y };
+	ImGui::Image(id, size, uv0, uv1);
+	bool result = ImGui::IsItemClicked();
+	lua_pushboolean(L, result);
+	return 1;
+}
+REF_WRAP_MANUAL(wrap_imgui_sprite);
 bool imgui_color(const char* name, CF_Color color) { return ImGui::ColorPicker4(name, &color.r); }
 REF_FUNCTION(imgui_color);
 bool imgui_checkbox(const char* name, bool opened) { ImGui::Checkbox(name, &opened); return opened; }
@@ -1357,3 +1374,19 @@ void imgui_push_id(int id) { ImGui::PushID(id); }
 REF_FUNCTION(imgui_push_id);
 void imgui_pop_id() { ImGui::PopID(); }
 REF_FUNCTION(imgui_pop_id);
+CF_V2 imgui_get_cursor_screen_pos() { return ImGui::GetCursorScreenPos(); }
+REF_FUNCTION(imgui_get_cursor_screen_pos);
+void imgui_set_cursor_screen_pos(CF_V2 p) { ImGui::SetCursorScreenPos(p); }
+REF_FUNCTION(imgui_set_cursor_screen_pos);
+bool imgui_is_item_clicked() { return ImGui::IsItemClicked(); }
+REF_FUNCTION(imgui_is_item_clicked);
+void imgui_add_rect(CF_V2 min, CF_V2 max, CF_Color col, float rounding, float thickness) {
+	ImDrawList* draw = ImGui::GetWindowDrawList();
+	CF_Pixel p = to_pixel(col);
+	draw->AddRect(min, max, IM_COL32(255,0,0,255), rounding, ImDrawFlags_None, thickness);
+}
+REF_FUNCTION(imgui_add_rect);
+void imgui_columns(int columns) { ImGui::Columns(columns); }
+REF_FUNCTION(imgui_columns);
+void imgui_next_column() { ImGui::NextColumn(); }
+REF_FUNCTION(imgui_next_column);
