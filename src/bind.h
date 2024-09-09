@@ -589,7 +589,7 @@ void REF_LuaGetArray(lua_State* L, int index, const REF_Type* type, void* v, int
 		for (int j = 0; j < n; ++j) {
 			lua_rawgeti(L, index, i + 1 + j);
 		}
-		type->lua_get(L, -n, v);
+		type->lua_get(L, lua_gettop(L) + -n + 1, v);
 		v = (void*)((uintptr_t)v + type->size());
 		lua_pop(L, n);
 	}
@@ -736,6 +736,7 @@ struct REF_Struct : public REF_Type
 				// not set certain struct members.
 				lua_pop(L, 1);
 				m->type->zero(mv);
+				CF_ASSERT(!"Key is missing from a struct sent from Lua to C");
 				continue;
 			}
 			if (m->is_array()) {
@@ -850,9 +851,10 @@ struct REF_FunctionSignature
 			this->param_count = sizeof...(Params);
 			this->params = params;
 			for (int i = 0; i < array_param_list.size(); ++i) {
-				param_is_array[array_param_list.begin()[i].array_index] = true;
-				param_array_count_index[i] = array_param_list.begin()[i].count_index;
-				param_is_array_count[param_array_count_index[i]] = true;
+				REF_ArrayParameter array_param = array_param_list.begin()[i];
+				param_is_array[array_param.array_index] = true;
+				param_array_count_index[array_param.array_index] = array_param.count_index;
+				param_is_array_count[array_param.count_index] = true;
 			}
 			this->param_is_array = param_is_array;
 			this->param_is_array_count = param_is_array_count;
@@ -863,8 +865,8 @@ struct REF_FunctionSignature
 
 	int param_count = 0;
 	const REF_Type** params = NULL;
-	const bool* param_is_array_count = NULL;
 	const bool* param_is_array = NULL;
+	const bool* param_is_array_count = NULL;
 	const int* param_array_count_index = NULL;
 	const REF_Type* return_type = NULL;
 };

@@ -644,7 +644,7 @@ REF_STRUCT(CF_AtlasSubImage,
 	REF_MEMBER(maxy),
 );
 
-REF_FUNCTION(register_premade_atlas, {1,2});
+REF_FUNCTION(register_premade_atlas, {2,1});
 
 // -------------------------------------------------------------------------------------------------
 // File I/O
@@ -1203,6 +1203,25 @@ int wrap_make_premade_sprite(lua_State* L)
 }
 REF_WRAP_MANUAL(wrap_make_premade_sprite);
 
+int wrap_get_png_wh(lua_State* L)
+{
+	const char* path = lua_tostring(L, -1);
+	lua_pop(L, 1);
+
+	size_t sz = 0;
+	void* data = fs_read_entire_file_to_memory(path, &sz);
+	CF_ASSERT(data);
+	int x, y;
+	image_load_png_wh(data, (int)sz, &x, &y);
+	cf_free(data);
+
+	lua_pushnumber(L, x);
+	lua_pushnumber(L, y);
+
+	return 2;
+}
+REF_WRAP_MANUAL(wrap_get_png_wh);
+
 // -------------------------------------------------------------------------------------------------
 // Dear ImGui bindings on an as-needed basis.
 
@@ -1278,7 +1297,7 @@ int wrap_imgui_sprite_button(lua_State* L)
 	lua_pop(L, 2);
 	CF_TemporaryImage image = cf_fetch_image(s);
 	ImTextureID id = (ImTextureID)cf_texture_handle(image.tex);
-	ImVec2 size = { (float)image.w * s->scale.x + 2, (float)image.h * s->scale.y + 2 };
+	ImVec2 size = { (float)image.w * s->scale.x, (float)image.h * s->scale.y };
 	// y is flipped
 	ImVec2 uv0 = { image.u.x, image.v.y };
 	ImVec2 uv1 = { image.v.x, image.u.y };
@@ -1334,3 +1353,7 @@ void imgui_set_item_default_focus() { ImGui::SetItemDefaultFocus(); }
 REF_FUNCTION(imgui_set_item_default_focus);
 void imgui_set_frame_rounding(float rounding) { ImGui::GetStyle().FrameRounding = rounding; }
 REF_FUNCTION(imgui_set_frame_rounding);
+void imgui_push_id(int id) { ImGui::PushID(id); }
+REF_FUNCTION(imgui_push_id);
+void imgui_pop_id() { ImGui::PopID(); }
+REF_FUNCTION(imgui_pop_id);
