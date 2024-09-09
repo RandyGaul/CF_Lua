@@ -463,6 +463,8 @@ REF_FUNCTION_EX(sprite_will_finish, cf_sprite_will_finish);
 REF_FUNCTION_EX(sprite_on_loop, cf_sprite_on_loop);
 REF_FUNCTION_EX(sprite_width, cf_sprite_width);
 REF_FUNCTION_EX(sprite_height, cf_sprite_height);
+REF_FUNCTION_EX(sprite_get_width, cf_sprite_width);
+REF_FUNCTION_EX(sprite_get_height, cf_sprite_height);
 REF_FUNCTION_EX(sprite_get_scale_x, cf_sprite_get_scale_x);
 REF_FUNCTION_EX(sprite_get_scale_y, cf_sprite_get_scale_y);
 REF_FUNCTION_EX(sprite_set_scale, cf_sprite_set_scale);
@@ -1277,6 +1279,10 @@ REF_CONSTANT(ImGuiTreeNodeFlags_SpanAllColumns);
 REF_CONSTANT(ImGuiTreeNodeFlags_NavLeftJumpsBackHere);
 REF_CONSTANT(ImGuiTreeNodeFlags_CollapsingHeader);
 
+REF_CONSTANT(ImGuiMouseButton_Left);
+REF_CONSTANT(ImGuiMouseButton_Right);
+REF_CONSTANT(ImGuiMouseButton_Middle);
+
 void imgui_begin(const char* name) { ImGui::Begin(name); }
 REF_FUNCTION(imgui_begin);
 bool imgui_begin_ex(const char* name, bool opened, int flags) { ImGui::Begin(name, &opened, flags); return opened; }
@@ -1390,3 +1396,7 @@ void imgui_columns(int columns) { ImGui::Columns(columns); }
 REF_FUNCTION(imgui_columns);
 void imgui_next_column() { ImGui::NextColumn(); }
 REF_FUNCTION(imgui_next_column);
+bool imgui_is_mouse_clicked_on_world(int button) { return !ImGui::GetIO().WantCaptureMouse && ImGui::IsMouseClicked(button); }
+REF_FUNCTION(imgui_is_mouse_clicked_on_world);
+bool imgui_want_mouse_capture() { return ImGui::GetIO().WantCaptureMouse; }
+REF_FUNCTION(imgui_want_mouse_capture);
