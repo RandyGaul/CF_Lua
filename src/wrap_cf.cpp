@@ -757,6 +757,8 @@ REF_WRAP_MANUAL(wrap_fs_read_entire_file_to_memory);
 
 REF_FUNCTION(fs_get_backend_specific_error_message);
 REF_FUNCTION(fs_get_actual_path);
+const char* normalize_path(const char* path) { Path p = path; p.normalize(); return sintern(p.c_str()); } // @JANK "leaks" the intern'd string, oh well.
+REF_FUNCTION(normalize_path);
 
 // -------------------------------------------------------------------------------------------------
 // haptics
@@ -1400,3 +1402,5 @@ bool imgui_is_mouse_clicked_on_world(int button) { return !ImGui::GetIO().WantCa
 REF_FUNCTION(imgui_is_mouse_clicked_on_world);
 bool imgui_want_mouse_capture() { return ImGui::GetIO().WantCaptureMouse; }
 REF_FUNCTION(imgui_want_mouse_capture);
+void imgui_text(const char* s) { ImGui::Text(s); }
+REF_FUNCTION(imgui_text);
