@@ -742,7 +742,7 @@ REF_FUNCTION(fs_eof);
 REF_FUNCTION(fs_tell);
 REF_FUNCTION(fs_size);
 
-int wrap_fs_read_entire_file_to_memory(lua_State* L)
+int wrap_fs_read_entire_file(lua_State* L)
 {
 	const char* path = lua_tostring(L, -1);
 	lua_pop(L, 1);
@@ -753,7 +753,7 @@ int wrap_fs_read_entire_file_to_memory(lua_State* L)
 	lua_pushinteger(L, sz);
 	return 2;
 }
-REF_WRAP_MANUAL(wrap_fs_read_entire_file_to_memory);
+REF_WRAP_MANUAL(wrap_fs_read_entire_file);
 
 REF_FUNCTION(fs_get_backend_specific_error_message);
 REF_FUNCTION(fs_get_actual_path);
@@ -1285,6 +1285,16 @@ REF_CONSTANT(ImGuiMouseButton_Left);
 REF_CONSTANT(ImGuiMouseButton_Right);
 REF_CONSTANT(ImGuiMouseButton_Middle);
 
+REF_CONSTANT(ImGuiComboFlags_None);
+REF_CONSTANT(ImGuiComboFlags_PopupAlignLeft);
+REF_CONSTANT(ImGuiComboFlags_HeightSmall);
+REF_CONSTANT(ImGuiComboFlags_HeightRegular);
+REF_CONSTANT(ImGuiComboFlags_HeightLarge);
+REF_CONSTANT(ImGuiComboFlags_HeightLargest);
+REF_CONSTANT(ImGuiComboFlags_NoArrowButton);
+REF_CONSTANT(ImGuiComboFlags_NoPreview);
+REF_CONSTANT(ImGuiComboFlags_WidthFitPreview);
+
 void imgui_begin(const char* name) { ImGui::Begin(name); }
 REF_FUNCTION(imgui_begin);
 bool imgui_begin_ex(const char* name, bool opened, int flags) { ImGui::Begin(name, &opened, flags); return opened; }
@@ -1370,6 +1380,8 @@ void imgui_same_line() { ImGui::SameLine(); }
 REF_FUNCTION(imgui_same_line);
 bool imgui_begin_combo(const char* name, const char* preview) { return ImGui::BeginCombo(name, preview); }
 REF_FUNCTION(imgui_begin_combo);
+bool imgui_begin_combo_ex(const char* name, const char* preview, int flags) { return ImGui::BeginCombo(name, preview, flags); }
+REF_FUNCTION(imgui_begin_combo_ex);
 void imgui_end_combo() { ImGui::EndCombo(); }
 REF_FUNCTION(imgui_end_combo);
 bool imgui_selectable(const char* name, bool is_selected) { return ImGui::Selectable(name, is_selected); }
@@ -1404,3 +1416,5 @@ bool imgui_want_mouse_capture() { return ImGui::GetIO().WantCaptureMouse; }
 REF_FUNCTION(imgui_want_mouse_capture);
 void imgui_text(const char* s) { ImGui::Text(s); }
 REF_FUNCTION(imgui_text);
+void imgui_set_next_item_width(float width) { ImGui::SetNextItemWidth(width); }
+REF_FUNCTION(imgui_set_next_item_width);
