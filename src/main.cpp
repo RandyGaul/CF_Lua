@@ -67,6 +67,18 @@ void cf_assert_override(bool expr, const char* message, const char* file, int li
 	}
 }
 
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
+void wait_for_debugger()
+{
+	while (!IsDebuggerPresent()) {
+		printf("Waiting for debugger to attach...\n");
+		Sleep(500);
+	}
+}
+REF_FUNCTION(wait_for_debugger);
+
 int main(int argc, char* argv[])
 {
 	b2SetAssertFcn(b2_assert_override);
