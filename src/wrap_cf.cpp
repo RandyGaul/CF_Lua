@@ -1378,6 +1378,8 @@ bool imgui_collapsing_header_ex(const char* name, int flags) { return ImGui::Col
 REF_FUNCTION(imgui_collapsing_header_ex);
 void imgui_same_line() { ImGui::SameLine(); }
 REF_FUNCTION(imgui_same_line);
+void imgui_sameline() { ImGui::SameLine(); }
+REF_FUNCTION(imgui_sameline);
 bool imgui_begin_combo(const char* name, const char* preview) { return ImGui::BeginCombo(name, preview); }
 REF_FUNCTION(imgui_begin_combo);
 bool imgui_begin_combo_ex(const char* name, const char* preview, int flags) { return ImGui::BeginCombo(name, preview, flags); }
