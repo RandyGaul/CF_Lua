@@ -516,7 +516,6 @@ REF_STRUCT(b2Profile,
 );
 
 REF_STRUCT(b2Counters,
-	REF_MEMBER(staticBodyCount),
 	REF_MEMBER(bodyCount),
 	REF_MEMBER(shapeCount),
 	REF_MEMBER(contactCount),
@@ -1051,7 +1050,6 @@ struct b2DebugDrawSettings
 	const char* draw_solid_polygon;
 	const char* draw_circle;
 	const char* draw_solid_circle;
-	const char* draw_capsule;
 	const char* draw_solid_capsule;
 	const char* draw_segment;
 	const char* draw_transform;
@@ -1060,7 +1058,6 @@ struct b2DebugDrawSettings
 
 	b2AABB drawingBounds;
 	bool useDrawingBounds;
-	bool drawText;
 	bool drawShapes;
 	bool drawJoints;
 	bool drawJointExtras;
@@ -1079,7 +1076,6 @@ REF_STRUCT(b2DebugDrawSettings,
 	REF_MEMBER(draw_solid_polygon),
 	REF_MEMBER(draw_circle),
 	REF_MEMBER(draw_solid_circle),
-	REF_MEMBER(draw_capsule),
 	REF_MEMBER(draw_solid_capsule),
 	REF_MEMBER(draw_segment),
 	REF_MEMBER(draw_transform),
@@ -1087,7 +1083,6 @@ REF_STRUCT(b2DebugDrawSettings,
 	REF_MEMBER(draw_string),
 	REF_MEMBER(drawingBounds),
 	REF_MEMBER(useDrawingBounds),
-	REF_MEMBER(drawText),
 	REF_MEMBER(drawShapes),
 	REF_MEMBER(drawJoints),
 	REF_MEMBER(drawJointExtras),
@@ -1132,12 +1127,6 @@ void wrap_DrawSolidCircleFn(b2Transform transform, float radius, b2HexColor colo
 	REF_CallLuaFunction(L, lua_fn_name, { }, transform, radius, make_color(color));
 }
 
-void wrap_DrawCapsuleFn(b2Vec2 p1, b2Vec2 p2, float radius, b2HexColor color, void* context)
-{
-	const char* lua_fn_name = ((b2DebugDrawSettings*)context)->draw_capsule;
-	REF_CallLuaFunction(L, lua_fn_name, { }, p1, p2, radius, make_color(color));
-}
-
 void wrap_DrawCapsuleSolidFn(b2Vec2 p1, b2Vec2 p2, float radius, b2HexColor color, void* context)
 {
 	const char* lua_fn_name = ((b2DebugDrawSettings*)context)->draw_solid_capsule;
@@ -1162,16 +1151,6 @@ void wrap_DrawPointFn(b2Vec2 point, float size, b2HexColor color, void* context)
 	REF_CallLuaFunction(L, lua_fn_name, { }, point, size, make_color(color));
 }
 
-void wrap_DrawStringFn(b2Vec2 point, const char* string, void* context)
-{
-	const char* lua_fn_name = ((b2DebugDrawSettings*)context)->draw_string;
-	REF_CallLuaFunction(L, lua_fn_name, { }, point, string);
-}
-
-void wrap_DrawStringStubFn(b2Vec2 point, const char* string, void* context)
-{
-}
-
 int wrap_b2World_Draw(lua_State* L)
 {
 	int base = lua_gettop(L);
@@ -1183,14 +1162,11 @@ int wrap_b2World_Draw(lua_State* L)
 		wrap_DrawSolidPolygonFn,
 		wrap_DrawCircleFn,
 		wrap_DrawSolidCircleFn,
-		wrap_DrawCapsuleFn,
 		wrap_DrawCapsuleSolidFn,
 		wrap_DrawSegmentFn,
 		wrap_DrawTransformFn,
 		wrap_DrawPointFn,
-		wrap_DrawStringFn,
 	};
-	dd.DrawString = settings.drawText ? wrap_DrawStringFn : wrap_DrawStringStubFn;
 	dd.drawingBounds = settings.drawingBounds;
 	dd.useDrawingBounds = settings.useDrawingBounds;
 	dd.drawShapes = settings.drawShapes;

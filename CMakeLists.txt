@@ -18,6 +18,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(box2d)
 
+set_target_properties(box2d PROPERTIES CMAKE_COMPILE_WARNING_AS_ERROR OFF)
+
 # Define the Lua library
 add_library(Lua
 	lua/onelua.c
