@@ -1420,3 +1420,5 @@ void imgui_text(const char* s) { ImGui::Text(s); }
 REF_FUNCTION(imgui_text);
 void imgui_set_next_item_width(float width) { ImGui::SetNextItemWidth(width); }
 REF_FUNCTION(imgui_set_next_item_width);
+void imgui_set_next_item_open(bool open) { ImGui::SetNextItemOpen(open); }
+REF_FUNCTION(imgui_set_next_item_open);
