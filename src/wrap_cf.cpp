@@ -1301,8 +1301,16 @@ bool imgui_begin_ex(const char* name, bool opened, int flags) { ImGui::Begin(nam
 REF_FUNCTION(imgui_begin_ex);
 void imgui_end() { ImGui::End(); }
 REF_FUNCTION(imgui_end);
+void imgui_set_next_window_pos(CF_V2 position) { ImGui::SetNextWindowPos(position); }
+REF_FUNCTION(imgui_set_next_window_pos);
+void imgui_set_next_window_size(CF_V2 position) { ImGui::SetNextWindowSize(position); }
+REF_FUNCTION(imgui_set_next_window_size);
 bool imgui_button(const char* name) { return ImGui::Button(name); }
 REF_FUNCTION(imgui_button);
+bool imgui_button_ex(const char* name, CF_V2 size) { return ImGui::Button(name, size); }
+REF_FUNCTION(imgui_button_ex);
+float imgui_get_frame_height() { return ImGui::GetFrameHeight(); }
+REF_FUNCTION(imgui_get_frame_height);
 void imgui_separator() { ImGui::Separator(); }
 REF_FUNCTION(imgui_separator);
 void imgui_separator_text(const char* text) { ImGui::SeparatorText(text); }
@@ -1347,6 +1355,7 @@ bool imgui_checkbox(const char* name, bool opened) { ImGui::Checkbox(name, &open
 REF_FUNCTION(imgui_checkbox);
 CF_V2 imgui_v2(const char* name, CF_V2 v, const char* fmt) { ImGui::InputFloat2(name, &v.x, fmt); return v; }
 REF_FUNCTION(imgui_v2);
+REF_FUNCTION_EX(imgui_float2, imgui_v2);
 int imgui_int(const char* name, int i) { ImGui::InputInt(name, &i); return i; }
 REF_FUNCTION(imgui_int);
 float imgui_float(const char* name, float f) { ImGui::InputFloat(name, &f); return f; }
@@ -1388,6 +1397,8 @@ void imgui_end_combo() { ImGui::EndCombo(); }
 REF_FUNCTION(imgui_end_combo);
 bool imgui_selectable(const char* name, bool is_selected) { return ImGui::Selectable(name, is_selected); }
 REF_FUNCTION(imgui_selectable);
+bool imgui_is_item_hovered() { return ImGui::IsItemHovered(); }
+REF_FUNCTION(imgui_is_item_hovered);
 void imgui_set_item_default_focus() { ImGui::SetItemDefaultFocus(); }
 REF_FUNCTION(imgui_set_item_default_focus);
 void imgui_set_frame_rounding(float rounding) { ImGui::GetStyle().FrameRounding = rounding; }
@@ -1396,6 +1407,8 @@ void imgui_push_id(int id) { ImGui::PushID(id); }
 REF_FUNCTION(imgui_push_id);
 void imgui_pop_id() { ImGui::PopID(); }
 REF_FUNCTION(imgui_pop_id);
+void imgui_dummy(float x, float y) { ImGui::Dummy(ImVec2(x, y)); }
+REF_FUNCTION(imgui_dummy);
 CF_V2 imgui_get_cursor_screen_pos() { return ImGui::GetCursorScreenPos(); }
 REF_FUNCTION(imgui_get_cursor_screen_pos);
 void imgui_set_cursor_screen_pos(CF_V2 p) { ImGui::SetCursorScreenPos(p); }
@@ -1416,9 +1429,19 @@ bool imgui_is_mouse_clicked_on_world(int button) { return !ImGui::GetIO().WantCa
 REF_FUNCTION(imgui_is_mouse_clicked_on_world);
 bool imgui_want_mouse_capture() { return ImGui::GetIO().WantCaptureMouse; }
 REF_FUNCTION(imgui_want_mouse_capture);
-void imgui_text(const char* s) { ImGui::Text(s); }
+bool imgui_want_keyboard_capture() { return ImGui::GetIO().WantCaptureKeyboard; }
+REF_FUNCTION(imgui_want_keyboard_capture);
+bool imgui_is_any_window_hovered() { return ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow); }
+REF_FUNCTION(imgui_is_any_window_hovered);
+void imgui_text(const char* text) { CF_ASSERT(text); ImGui::Text(text); }
 REF_FUNCTION(imgui_text);
+char* imgui_input_text(const char* label, const char* text) { CF_ASSERT(text); static char buffer[1024]; sprintf(buffer, "%s", text); ImGui::InputText(label, buffer, sizeof(buffer)); return buffer; }
+REF_FUNCTION(imgui_input_text);
 void imgui_set_next_item_width(float width) { ImGui::SetNextItemWidth(width); }
 REF_FUNCTION(imgui_set_next_item_width);
 void imgui_set_next_item_open(bool open) { ImGui::SetNextItemOpen(open); }
 REF_FUNCTION(imgui_set_next_item_open);
+void imgui_text_colored(float r, float g, float b, float a, const char* text) { ImGui::TextColored(ImVec4(r, g, b, a), text); }
+REF_FUNCTION(imgui_text_colored);
+void imgui_set_scroll_here_y(float y) { ImGui::SetScrollHereY(y); }
+REF_FUNCTION(imgui_set_scroll_here_y);
