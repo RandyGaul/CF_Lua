@@ -479,6 +479,7 @@ REF_FUNCTION_EX(sprite_set_opacity, cf_sprite_set_opacity);
 REF_FUNCTION_EX(sprite_get_play_speed_multiplier, cf_sprite_get_play_speed_multiplier);
 REF_FUNCTION_EX(sprite_set_play_speed_multiplier, cf_sprite_set_play_speed_multiplier);
 REF_FUNCTION_EX(sprite_get_loop_count, cf_sprite_get_loop_count);
+REF_FUNCTION_EX(sprite_get_local_offset, cf_sprite_get_local_offset);
 // The rest of sprite stuff bound manually below.
 
 REF_FUNCTION_EX(draw_quad, cf_draw_quad);
