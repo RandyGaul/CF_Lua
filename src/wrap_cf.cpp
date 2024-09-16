@@ -762,66 +762,6 @@ const char* normalize_path(const char* path) { Path p = path; p.normalize(); ret
 REF_FUNCTION(normalize_path);
 
 // -------------------------------------------------------------------------------------------------
-// haptics
-
-CF_HAPTIC_TYPE_DEFS
-CF_HAPTIC_WAVE_TYPE_DEFS
-
-REF_HANDLE_TYPE(CF_Haptic);
-REF_HANDLE_TYPE(CF_HapticEffect);
-
-REF_STRUCT(CF_HapticEnvelope,
-	REF_MEMBER(attack),
-	REF_MEMBER(attack_milliseconds),
-	REF_MEMBER(fade),
-	REF_MEMBER(fade_milliseconds),
-);
-
-REF_STRUCT(CF_HapticLeftRight,
-	REF_MEMBER(duration_milliseconds),
-	REF_MEMBER(lo_motor_strength),
-	REF_MEMBER(hi_motor_strength),
-);
-
-REF_STRUCT(CF_HapticPeriodic,
-	REF_MEMBER(wave_type),
-	REF_MEMBER(duration_milliseconds),
-	REF_MEMBER(period_milliseconds),
-	REF_MEMBER(magnitude),
-	REF_MEMBER(envelope),
-);
-
-REF_STRUCT(CF_HapticRamp,
-	REF_MEMBER(duration_milliseconds),
-	REF_MEMBER(start),
-	REF_MEMBER(end),
-	REF_MEMBER(envelope),
-);
-
-REF_STRUCT(CF_HapticData,
-	REF_MEMBER(type),
-	REF_MEMBER(u.leftright),
-	REF_MEMBER(u.periodic),
-	REF_MEMBER(u.ramp),
-);
-
-REF_FUNCTION(haptic_open);
-REF_FUNCTION(haptic_close);
-REF_FUNCTION(haptic_supports);
-REF_FUNCTION(haptic_set_gain);
-REF_FUNCTION(haptic_create_effect);
-REF_FUNCTION(haptic_run_effect);
-REF_FUNCTION(haptic_update_effect);
-REF_FUNCTION(haptic_stop_effect);
-REF_FUNCTION(haptic_destroy_effect);
-REF_FUNCTION(haptic_pause);
-REF_FUNCTION(haptic_unpause);
-REF_FUNCTION(haptic_stop_all);
-REF_FUNCTION(haptic_rumble_supported);
-REF_FUNCTION(haptic_rumble_play);
-REF_FUNCTION(haptic_rumble_stop);
-
-// -------------------------------------------------------------------------------------------------
 // https
 
 CF_HTTPS_RESULT_DEFS
@@ -938,12 +878,8 @@ CF_JOYPAD_POWER_LEVEL_DEFS
 CF_JOYPAD_BUTTON_DEFS
 CF_JOYPAD_AXIS_DEFS
 
-REF_HANDLE_TYPE(CF_Joypad);
-
 REF_FUNCTION(joypad_add_mapping);
 REF_FUNCTION(joypad_count);
-REF_FUNCTION(joypad_open);
-REF_FUNCTION(joypad_close);
 REF_FUNCTION(joypad_is_connected);
 REF_FUNCTION(joypad_power_level);
 REF_FUNCTION(joypad_name);
@@ -957,6 +893,7 @@ REF_FUNCTION(joypad_button_down);
 REF_FUNCTION(joypad_button_just_pressed);
 REF_FUNCTION(joypad_button_just_released);
 REF_FUNCTION(joypad_axis);
+REF_FUNCTION(joypad_rumble);
 
 // -------------------------------------------------------------------------------------------------
 // Noise
