@@ -893,6 +893,7 @@ REF_FUNCTION(joypad_button_down);
 REF_FUNCTION(joypad_button_just_pressed);
 REF_FUNCTION(joypad_button_just_released);
 REF_FUNCTION(joypad_axis);
+REF_FUNCTION(joypad_axis_prev);
 REF_FUNCTION(joypad_rumble);
 
 // -------------------------------------------------------------------------------------------------
