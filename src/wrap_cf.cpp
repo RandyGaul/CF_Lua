@@ -1384,3 +1384,7 @@ void imgui_text_colored(float r, float g, float b, float a, const char* text) { 
 REF_FUNCTION(imgui_text_colored);
 void imgui_set_scroll_here_y(float y) { ImGui::SetScrollHereY(y); }
 REF_FUNCTION(imgui_set_scroll_here_y);
+float imgui_slider_float(const char* label, float v, float lo, float hi) { ImGui::SliderFloat(label, &v, lo, hi); return v; }
+REF_FUNCTION(imgui_slider_float);
+CF_V2 imgui_slider_float2(const char* label, CF_V2 v, float lo, float hi) { ImGui::SliderFloat2(label, &v.x, lo, hi); return v; }
+REF_FUNCTION(imgui_slider_float2);
