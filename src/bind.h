@@ -1284,7 +1284,7 @@ int REF_CallLuaFunction(lua_State* L, const char* fn_name)
 		virtual void lua_set(lua_State* L, void* v) const override { for (int i = 0; i < N; ++i) lua_pushinteger(L, ((int*)v)[i]); } \
 		virtual void lua_get(lua_State* L, int index, void* v) const override { for (int i = 0; i < N; ++i) ((int*)v)[i] = (int)lua_tointeger(L, index + i); } \
 		virtual int flattened_count() const override { return N; } \
-		virtual const REF_Type* flattened_type() const override { return REF_GetType<float>(); } \
+		virtual const REF_Type* flattened_type() const override { return REF_GetType<int>(); } \
 	} g_##T##_Type; \
 	template <> struct REF_TypeGetter<T> { static const REF_Type* get() { return &g_##T##_Type; } }; \
 	REF_PTR_TYPE(T); \
