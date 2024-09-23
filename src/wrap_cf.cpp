@@ -531,10 +531,6 @@ REF_FUNCTION(push_text_wrap_width);
 REF_FUNCTION(pop_text_wrap_width);
 REF_FUNCTION(peek_text_wrap_width);
 
-REF_FUNCTION(push_text_clip_box);
-REF_FUNCTION(pop_text_clip_box);
-REF_FUNCTION(peek_text_clip_box);
-
 REF_FUNCTION(text_width);
 REF_FUNCTION(text_height);
 REF_FUNCTION(text_size);
@@ -590,28 +586,27 @@ int wrap_text_effect_register(lua_State* L)
 }
 REF_WRAP_MANUAL(wrap_text_effect_register);
 
-REF_FUNCTION(render_settings_filter);
-REF_FUNCTION(render_settings_push_viewport);
-REF_FUNCTION(render_settings_pop_viewport);
-REF_FUNCTION(render_settings_peek_viewport);
-REF_FUNCTION(render_settings_push_scissor);
-REF_FUNCTION(render_settings_pop_scissor);
-REF_FUNCTION(render_settings_peek_scissor);
-REF_FUNCTION(render_settings_push_render_state);
-REF_FUNCTION(render_settings_pop_render_state);
-REF_FUNCTION(render_settings_peek_render_state);
-REF_FUNCTION(render_settings_set_atlas_dimensions);
+REF_FUNCTION(draw_push_viewport);
+REF_FUNCTION(draw_pop_viewport);
+REF_FUNCTION(draw_peek_viewport);
+REF_FUNCTION(draw_push_scissor);
+REF_FUNCTION(draw_pop_scissor);
+REF_FUNCTION(draw_peek_scissor);
+REF_FUNCTION(draw_push_render_state);
+REF_FUNCTION(draw_pop_render_state);
+REF_FUNCTION(draw_peek_render_state);
+REF_FUNCTION(draw_set_atlas_dimensions);
 REF_FUNCTION(make_draw_shader);
 REF_FUNCTION(make_draw_shader_from_source);
-REF_FUNCTION(render_settings_push_shader);
-REF_FUNCTION(render_settings_pop_shader);
-REF_FUNCTION(render_settings_peek_shader);
-REF_FUNCTION(render_settings_push_texture);
+REF_FUNCTION(draw_push_shader);
+REF_FUNCTION(draw_pop_shader);
+REF_FUNCTION(draw_peek_shader);
+REF_FUNCTION(draw_set_texture);
 
-REF_FUNCTION_EX(render_settings_set_uniform_int,   cf_render_settings_set_uniform_int);
-REF_FUNCTION_EX(render_settings_set_uniform_float, cf_render_settings_set_uniform_float);
-REF_FUNCTION_EX(render_settings_set_uniform_v2,    cf_render_settings_set_uniform_v2);
-REF_FUNCTION_EX(render_settings_set_uniform_color, cf_render_settings_set_uniform_color);
+REF_FUNCTION_EX(render_settings_set_uniform_int,   cf_draw_set_uniform_int);
+REF_FUNCTION_EX(render_settings_set_uniform_float, cf_draw_set_uniform_float);
+REF_FUNCTION_EX(render_settings_set_uniform_v2,    cf_draw_set_uniform_v2);
+REF_FUNCTION_EX(render_settings_set_uniform_color, cf_draw_set_uniform_color);
 
 REF_FUNCTION_EX(draw_scale, cf_draw_scale);
 REF_FUNCTION_EX(draw_translate, cf_draw_translate);

@@ -17,7 +17,17 @@ void dump_lua_api()
 	}
 	printf("\nFunctions:\n");
 	for (const REF_Function* fn = REF_Function::head(); fn; fn = fn->next) {
-		printf("\t%s\n", fn->name());
+		printf("\t%s(", fn->name());
+		const REF_FunctionSignature& sig = fn->sig();
+		for (int i = 0; i < sig.param_count; i++) {
+			const REF_Type* type = sig.params[i];
+			int flattened_count = type->flattened_count();
+
+			for (int j = 0; j < flattened_count; ++j) {
+				printf("%s%s", (i == 0 && j == 0) ? "" : ", ", type->flattened_type()->name());
+			}
+		}
+		printf(")\n");
 	}
 	for (const REF_WrapBinder* w = REF_WrapBinder::head(); w; w = w->next) {
 		printf("\t%s\n", w->name);
@@ -87,6 +97,8 @@ int main(int argc, char* argv[])
 	::L = luaL_newstate();
 	luaL_openlibs(L);
 	REF_BindLua(L);
+
+	dump_lua_api();
 
 	if (argc < 2) {
 		printf("You should supply the path to your `main.lua` file as the first command line parameter.\n");
