@@ -601,6 +601,9 @@ REF_FUNCTION(make_draw_shader_from_source);
 REF_FUNCTION(draw_push_shader);
 REF_FUNCTION(draw_pop_shader);
 REF_FUNCTION(draw_peek_shader);
+REF_FUNCTION(draw_push_alpha_discard);
+REF_FUNCTION(draw_pop_alpha_discard);
+REF_FUNCTION(draw_peek_alpha_discard);
 REF_FUNCTION(draw_set_texture);
 
 REF_FUNCTION_EX(render_settings_set_uniform_int,   cf_draw_set_uniform_int);
@@ -608,6 +611,7 @@ REF_FUNCTION_EX(render_settings_set_uniform_float, cf_draw_set_uniform_float);
 REF_FUNCTION_EX(render_settings_set_uniform_v2,    cf_draw_set_uniform_v2);
 REF_FUNCTION_EX(render_settings_set_uniform_color, cf_draw_set_uniform_color);
 
+REF_FUNCTION(draw_mul);
 REF_FUNCTION_EX(draw_scale, cf_draw_scale);
 REF_FUNCTION_EX(draw_translate, cf_draw_translate);
 REF_FUNCTION(draw_rotate);
@@ -619,6 +623,8 @@ REF_FUNCTION(draw_peek);
 REF_FUNCTION(draw_projection);
 REF_FUNCTION(world_to_screen);
 REF_FUNCTION(screen_to_world);
+REF_FUNCTION(screen_bounds_to_world);
+REF_FUNCTION_EX(draw_canvas, cf_draw_canvas);
 
 REF_FUNCTION(render_to);
 
