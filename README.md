@@ -21,6 +21,8 @@ draw_push_color(color)
 
 Otherwise there aren't too many quirks, and 99% of functions match 1:1 with the C function signatures.
 
+Smalltalk made a cool hotreloader, you can check it out here: https://gist.github.com/waldnercharles/a3e314afccfac40ce4fbf42b83093c54
+
 
 # Binding New Stuff
 
