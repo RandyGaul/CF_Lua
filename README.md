@@ -8,7 +8,20 @@ Make sure to do `git submodule update --init --recursive` once you clone the rep
 
 Arrays - When calling a C function and passing arrays over to C, do *NOT* send in the length of the array. The array length gets automatically handled by the binding system.
 
-Callbacks - Passing callbacks to C is done by sending a *string of the function name* in Lua, not the function itself.
+Callbacks - Passing callbacks to C is done by sending a *string of the function name* in Lua, not the function itself. Example for fixed updates:
+
+```lua
+function update()
+   -- do my fixed update here
+end
+
+function draw() end
+
+while app_is_running() do
+    app_update("update")
+    draw()
+end
+```
 
 Math types are all flattened. Each type has no keys, and is just a bunch of values. For example, 2d vectors (b2Vec2 and v2) are flattened into two floats. If we call a function in C that accepts some vectors, we must pass in each float explicitly from Lua. Example:
 
