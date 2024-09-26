@@ -38,17 +38,9 @@ REF_FUNCTION(dump_lua_api);
 // -------------------------------------------------------------------------------------------------
 // Main
 
-bool run_from_msvc_for_testing = false;
-
 void mount_directory_as(const char* to_mount, const char* dir)
 {
-	Path path = fs_get_base_directory();
-	path.normalize();
-	if (run_from_msvc_for_testing) {
-		path.pop(2); // Pop out of build/debug/
-	}
-	path += to_mount;
-	fs_mount(path.c_str(), dir);
+	fs_mount(to_mount, dir);
 }
 
 REF_FUNCTION(mount_directory_as);
@@ -103,7 +95,6 @@ int main(int argc, char* argv[])
 	if (argc < 2) {
 		printf("You should supply the path to your `main.lua` file as the first command line parameter.\n");
 		printf("Now assuming you've run from MSVC's Debug/Release folder for testing CF_Lua development.\n");
-		run_from_msvc_for_testing = true;
 	}
 
 	const char* path_to_main_lua = argc < 2 ? "../../src/main.lua" : argv[1];
