@@ -89,6 +89,8 @@ void wait_for_debugger()
 }
 REF_FUNCTION(wait_for_debugger);
 
+#include <direct.h> // chdir
+
 int main(int argc, char* argv[])
 {
 	b2SetAssertFcn(b2_assert_override);
@@ -98,8 +100,6 @@ int main(int argc, char* argv[])
 	luaL_openlibs(L);
 	REF_BindLua(L);
 
-	dump_lua_api();
-
 	if (argc < 2) {
 		printf("You should supply the path to your `main.lua` file as the first command line parameter.\n");
 		printf("Now assuming you've run from MSVC's Debug/Release folder for testing CF_Lua development.\n");
@@ -107,10 +107,17 @@ int main(int argc, char* argv[])
 	}
 
 	const char* path_to_main_lua = argc < 2 ? "../../src/main.lua" : argv[1];
-	if (luaL_dofile(L, path_to_main_lua)) {
+
+	const char* main_lua_dir = sppop(path_to_main_lua);
+	const char* main_lua_filename = spfname(path_to_main_lua);
+	chdir(main_lua_dir);
+	if (luaL_dofile(L, main_lua_filename)) {
 		fprintf(stderr, lua_tostring(L, -1));
 		return -1;
 	}
+	sfree(main_lua_filename);
+	sfree(main_lua_dir);
+
 	REF_CallLuaFunction(L, "main");
 	lua_close(L);
 
