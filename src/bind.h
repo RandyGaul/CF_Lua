@@ -300,6 +300,22 @@ inline void REF_PrintLuaStack(lua_State *L)
 	printf("\n");
 }
 
+// Mixin-style helper class to form a linked list of instances. Used for easily looping
+// over functions/constants to bind to Lua.
+template <typename T>
+struct REF_List
+{
+	REF_List()
+	{
+		next = head();
+		head() = (T*)this;
+	}
+
+	static T*& head() { static T* p = 0; return p; }
+
+	T* next;
+};
+
 // An abstract representation of types in C++, used to write generic routines
 // for binding things to Lua.
 struct REF_Type
@@ -645,7 +661,7 @@ struct REF_Member
 };
 
 // Represents a struct as a collection of REF_Member pointers. This maps to key'd tables in Lua.
-struct REF_Struct : public REF_Type
+struct REF_Struct : public REF_Type, REF_List<REF_Struct>
 {
 	virtual const char* name() const = 0;
 	virtual int size() const = 0;
@@ -902,22 +918,6 @@ void REF_Apply(void (*fn)(Params...), REF_Variable ret, REF_Variable* params, in
 	assert(param_count == sizeof...(Params));
 	REF_ApplyHelper(fn, params, std::make_index_sequence<sizeof...(Params)>());
 }
-
-// Mixin-style helper class to form a linked list of instances. Used for easily looping
-// over functions/constants to bind to Lua.
-template <typename T>
-struct REF_List
-{
-	REF_List()
-	{
-		next = head();
-		head() = (T*)this;
-	}
-
-	static T*& head() { static T* p = 0; return p; }
-
-	T* next;
-};
 
 // Stores type information of the function pointer, useful for implementing
 // the functor object REF_Function.
