@@ -250,7 +250,6 @@ REF_FUNCTION(make_canvas);
 REF_FUNCTION(destroy_canvas);
 REF_FUNCTION(canvas_get_target);
 REF_FUNCTION(canvas_get_depth_stencil_target);
-REF_FUNCTION(canvas_blit);
 REF_FUNCTION(make_mesh, {1, 2});
 REF_FUNCTION(destroy_mesh);
 // @TODO These need manual serializers.
