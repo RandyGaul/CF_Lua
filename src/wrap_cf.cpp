@@ -495,6 +495,8 @@ REF_FUNCTION(draw_tri);
 REF_FUNCTION(draw_tri_fill);
 REF_FUNCTION(draw_line);
 REF_FUNCTION(draw_polyline, {0,1});
+REF_FUNCTION(draw_polygon_fill, {0,1});
+REF_FUNCTION(draw_polygon_fill_simple, {0,1});
 REF_FUNCTION_EX(draw_bezier_line, cf_draw_bezier_line2);
 REF_FUNCTION(draw_arrow);
 
