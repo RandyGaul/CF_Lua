@@ -40,7 +40,10 @@ REF_FUNCTION(dump_lua_api);
 
 void mount_directory_as(const char* to_mount, const char* dir)
 {
-	fs_mount(to_mount, dir);
+	Path path = fs_get_base_directory();
+	path.normalize();
+	path += to_mount;
+	fs_mount(path.c_str(), dir);
 }
 
 REF_FUNCTION(mount_directory_as);
@@ -98,16 +101,10 @@ int main(int argc, char* argv[])
 	}
 
 	const char* path_to_main_lua = argc < 2 ? "../../src/main.lua" : argv[1];
-
-	const char* main_lua_dir = sppop(path_to_main_lua);
-	const char* main_lua_filename = spfname(path_to_main_lua);
-	chdir(main_lua_dir);
-	if (luaL_dofile(L, main_lua_filename)) {
+	if (luaL_dofile(L, path_to_main_lua)) {
 		fprintf(stderr, lua_tostring(L, -1));
 		return -1;
 	}
-	sfree(main_lua_filename);
-	sfree(main_lua_dir);
 
 	REF_CallLuaFunction(L, "main");
 	lua_close(L);
