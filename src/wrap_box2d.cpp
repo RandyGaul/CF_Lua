@@ -534,7 +534,7 @@ REF_FUNCTION(b2World_EnableContinuous);
 REF_FUNCTION(b2World_SetRestitutionThreshold);
 REF_FUNCTION(b2World_SetHitEventThreshold);
 REF_FUNCTION(b2World_SetGravity);
-REF_FUNCTION(b2World_Explode);
+//REF_FUNCTION(b2World_Explode); // @TODO Need to bind b2ExplosionDef.
 REF_FUNCTION(b2World_SetContactTuning);
 REF_FUNCTION(b2World_EnableWarmStarting);
 REF_FUNCTION(b2World_GetProfile);

@@ -476,6 +476,8 @@ REF_FUNCTION_EX(sprite_set_offset_x, cf_sprite_set_offset_x);
 REF_FUNCTION_EX(sprite_set_offset_y, cf_sprite_set_offset_y);
 REF_FUNCTION_EX(sprite_get_opacity, cf_sprite_get_opacity);
 REF_FUNCTION_EX(sprite_set_opacity, cf_sprite_set_opacity);
+REF_FUNCTION_EX(sprite_get_loop, cf_sprite_get_loop);
+REF_FUNCTION_EX(sprite_set_loop, cf_sprite_set_loop);
 REF_FUNCTION_EX(sprite_get_play_speed_multiplier, cf_sprite_get_play_speed_multiplier);
 REF_FUNCTION_EX(sprite_set_play_speed_multiplier, cf_sprite_set_play_speed_multiplier);
 REF_FUNCTION_EX(sprite_get_loop_count, cf_sprite_get_loop_count);
