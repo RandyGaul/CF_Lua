@@ -116,7 +116,7 @@ REF_STRUCT(b2BodyDef,
 	REF_MEMBER(isBullet),
 	REF_MEMBER(isEnabled),
 	REF_MEMBER(automaticMass),
-    REF_MEMBER(allowFastRotation),
+	REF_MEMBER(allowFastRotation),
 	REF_MEMBER(internalValue),
 );
 
