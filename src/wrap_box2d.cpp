@@ -68,6 +68,12 @@ REF_STRUCT(b2CastOutput,
 	REF_MEMBER(hit),
 );
 
+REF_CONSTANT(b2_mixAverage);
+REF_CONSTANT(b2_mixGeometricMean);
+REF_CONSTANT(b2_mixMultiply);
+REF_CONSTANT(b2_mixMinimum);
+REF_CONSTANT(b2_mixMaximum);
+
 REF_STRUCT(b2WorldDef,
 	REF_MEMBER(gravity),
 	REF_MEMBER(restitutionThreshold),
@@ -78,6 +84,8 @@ REF_STRUCT(b2WorldDef,
 	REF_MEMBER(jointHertz),
 	REF_MEMBER(jointDampingRatio),
 	REF_MEMBER(maximumLinearVelocity),
+	REF_MEMBER(frictionMixingRule),
+	REF_MEMBER(restitutionMixingRule),
 	REF_MEMBER(enableSleep),
 	REF_MEMBER(enableContinuous),
 	REF_MEMBER(workerCount),
@@ -101,12 +109,14 @@ REF_STRUCT(b2BodyDef,
 	REF_MEMBER(angularDamping),
 	REF_MEMBER(gravityScale),
 	REF_MEMBER(sleepThreshold),
+	REF_MEMBER(userData),
 	REF_MEMBER(enableSleep),
 	REF_MEMBER(isAwake),
 	REF_MEMBER(fixedRotation),
 	REF_MEMBER(isBullet),
 	REF_MEMBER(isEnabled),
 	REF_MEMBER(automaticMass),
+    REF_MEMBER(allowFastRotation),
 	REF_MEMBER(internalValue),
 );
 
