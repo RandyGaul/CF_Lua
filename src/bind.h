@@ -1045,7 +1045,8 @@ int REF_LuaCFunction(lua_State* L)
 
 		// Free any dynamically allocated arrays.
 		if (params[i].is_array) {
-			int sz = params[i].type->size() * params[i].array_count;
+			const REF_Type* element_type = params[i].type->dereference_type();
+			int sz = element_type->size() * params[i].array_count;
 			if (sz > alloca_limit) {
 				cf_free(params[i].v);
 			}
