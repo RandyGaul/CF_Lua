@@ -1048,7 +1048,7 @@ int REF_LuaCFunction(lua_State* L)
 			const REF_Type* element_type = params[i].type->dereference_type();
 			int sz = params[i].array_count * element_type->size();
 			if (sz > alloca_limit) {
-				cf_free(*(void **)params[i].v);
+				cf_free(*(void**)params[i].v);
 			}
 		}
 	}
