@@ -123,6 +123,16 @@ int REF_SyncGlobals(lua_State* L);
 //     );
 #define REF_MEMBER(M)
 
+// Expose a member of a struct to the reflection system with type T.
+// This is useful when you want to expose a member of a struct to the reflection system, but with a different type. Example:
+//
+//     REF_STRUCT(MyStruct
+//          REF_MEMBER_T(x, int),
+//          REF_MEMBER_T(y, int64_t),
+//          REF_MEMBER_T(data, void*),
+//     );
+#define REF_MEMBER_T(M, T)
+
 // Expose a member array of a struct to the reflection system. the count member does *not*
 // need to bound explicitly with another REF_MEMBER. Example:
 // 
@@ -1294,6 +1304,10 @@ int REF_CallLuaFunction(lua_State* L, const char* fn_name)
 // Expose a member of a struct to the reflection system.
 #undef REF_MEMBER
 #define REF_MEMBER(m) { #m, CF_OFFSET_OF(Type, m), REF_GetType<decltype(((Type*)0)->m)>(), NULL, 0, NULL, false }
+
+// Expose a member of a struct to the reflection system as type T.
+#undef REF_MEMBER_T
+#define REF_MEMBER_T(m, T) { #m, CF_OFFSET_OF(Type, m), REF_GetType<T>(), NULL, 0, NULL, false }
 
 // Expose an array member of a struct to the reflection system.
 #undef REF_MEMBER_ARRAY
