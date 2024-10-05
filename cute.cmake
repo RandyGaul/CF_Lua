@@ -1,0 +1,5 @@
+set(CUTE_FRAMEWORK_STATIC ON)
+set(CF_FRAMEWORK_BUILD_SAMPLES OFF)
+set(CF_FRAMEWORK_BUILD_TESTS OFF)
+
+add_subdirectory(cute_framework)
