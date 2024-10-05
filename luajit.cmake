@@ -21,10 +21,10 @@ ExternalProject_Add(luajit_build
 		BUILD_COMMAND "${luajit_SOURCE_DIR}/build.bat"
 		INSTALL_COMMAND ""
 		COMMAND cmake -E copy ${luajit_SOURCE_DIR}/src/lua51.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lua51.dll
-		COMMAND cmake -E copy ${luajit_SOURCE_DIR}/src/lua51.lib ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lua51.lib
-		BUILD_BYPRODUCTS "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lua51.lib" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lua51.dll")
+		COMMAND cmake -E copy ${luajit_SOURCE_DIR}/src/lua51.lib ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lua51.lib
+		BUILD_BYPRODUCTS "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lua51.lib" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lua51.dll")
 
-set(luajit_LIB ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lua51.lib)
+set(luajit_LIB ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lua51.lib)
 set(luajit_DLL ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lua51.dll)
 set(luajit_INCLUDE ${luajit_SOURCE_DIR}/src)
 
