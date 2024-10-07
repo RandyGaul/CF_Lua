@@ -3,6 +3,8 @@ project(CF_Lua)
 
 set(CMAKE_CXX_STANDARD 20)
 
+option(CF_LUA_LUAJIT "Use LuaJIT when building Lua." OFF)
+
 # Make sure all binaries are placed into the same build folder.
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -13,7 +15,7 @@ include(ExternalProject)
 
 include(cute.cmake)
 include(box2d.cmake)
-include(luajit.cmake)
+include(lua.cmake)
 
 # Add source for the game.
 add_executable(
@@ -22,10 +24,14 @@ add_executable(
 	src/main.cpp
 )
 
+if (CF_LUA_LUAJIT)
+	target_compile_definitions(CF_Lua PRIVATE $<$<BOOL:${CF_LUA_LUAJIT}>:CF_LUA_LUAJIT>)
+endif()
+
 target_include_directories(CF_Lua PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
 target_include_directories(CF_Lua PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/shaders>)
 
-target_link_libraries(CF_Lua cute box2d luajit)
+target_link_libraries(CF_Lua cute box2d lua)
 
 # For convenience set MSVC debugger's working directory in the build folder.
 # Also ask MSVC to make CF_Lua the startup project.

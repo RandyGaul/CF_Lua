@@ -18,7 +18,10 @@ extern "C"
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
+#ifdef CF_LUA_LUAJIT
 #include <luajit.h>
+#define luaL_len lua_objlen
+#endif
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -701,7 +704,7 @@ template <typename T>
 int REF_LuaGetDynamicArray(lua_State *L, int index, T **out_ptr)
 {
 	const REF_Type *type = REF_GetType<T>();
-	int count = (int)lua_objlen(L, index) / type->flattened_count();
+	int count = (int)luaL_len(L, index) / type->flattened_count();
 	T *v = (T *)cf_alloc(type->size() * count);
 	REF_LuaGetArray(L, index, type, v, count);
 	*out_ptr = v;
@@ -871,7 +874,7 @@ struct REF_Struct : public REF_Type, REF_List<REF_Struct>
 				{
 					// Dynamically allocate an external array, this is cleaned up in cleanup().
 					const REF_Type *element_type = m->type->dereference_type();
-					int n = (int)lua_objlen(L, -1) / element_type->flattened_count();
+					int n = (int)luaL_len(L, -1) / element_type->flattened_count();
 					m->array_count_type->cast((void *)((uintptr_t)v + m->array_count_offset), &n, REF_GetType<int>());
 					void *data = cf_alloc(n * element_type->size());
 					*(void **)mv = data;
@@ -880,7 +883,7 @@ struct REF_Struct : public REF_Type, REF_List<REF_Struct>
 				else
 				{
 					// Read the array straight into the struct instance.
-					int n = (int)lua_objlen(L, -1) / m->type->flattened_count();
+					int n = (int)luaL_len(L, -1) / m->type->flattened_count();
 					m->array_count_type->cast((void *)((uintptr_t)v + m->array_count_offset), &n, REF_GetType<int>());
 					REF_LuaGetArray(L, lua_gettop(L), m->type, mv, n);
 				}
@@ -1138,7 +1141,7 @@ int REF_LuaCFunction(lua_State *L)
 			assert(lua_istable(L, idx + 1));
 			const REF_Type *element_type = param->type->dereference_type();
 			flattened_count = element_type->flattened_count();
-			int count = (int)lua_objlen(L, idx + 1) / flattened_count;
+			int count = (int)luaL_len(L, idx + 1) / flattened_count;
 
 			// Set the element count in the correct parameter.
 			REF_Variable *vcount = params + sig.param_array_count_index[i];
