@@ -100,7 +100,11 @@ int main(int argc, char* argv[])
 		printf("Now assuming you've run from MSVC's Debug/Release folder for testing CF_Lua development.\n");
 	}
 
+#ifdef CF_LUA_LUAJIT
+	const char* path_to_main_lua = argc < 2 ? "../../src/main_luajit.lua" : argv[1];
+#else
 	const char* path_to_main_lua = argc < 2 ? "../../src/main.lua" : argv[1];
+#endif
 	if (luaL_dofile(L, path_to_main_lua)) {
 		fprintf(stderr, lua_tostring(L, -1));
 		return -1;
