@@ -20,7 +20,25 @@ extern "C"
 #include <lauxlib.h>
 #ifdef CF_LUA_LUAJIT
 #include <luajit.h>
-#define luaL_len lua_objlen
+	static int luaL_len(lua_State *L, int idx)
+	{
+		int len = 0;
+
+		if (lua_type(L, idx) == LUA_TSTRING)
+		{
+			len = lua_objlen(L, idx);
+		}
+		else if (lua_type(L, idx) == LUA_TTABLE)
+		{
+			len = lua_objlen(L, idx);
+		}
+		else
+		{
+			luaL_error(L, "Expected string or table for luaL_len");
+		}
+
+		return len;
+	}
 #endif
 }
 
