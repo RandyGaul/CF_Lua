@@ -3,7 +3,7 @@ project(CF_Lua)
 
 set(CMAKE_CXX_STANDARD 20)
 
-option(CF_LUA_LUAJIT "Use LuaJIT when building Lua." OFF)
+option(CF_LUA_LUAJIT "Use LuaJIT when building Lua." ON)
 
 # Make sure all binaries are placed into the same build folder.
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
